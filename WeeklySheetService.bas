@@ -150,14 +150,14 @@ Private Sub ReplaceAbsenceCodesWithLongForm(ByVal weeklySheet As Worksheet)
 
     Dim currentCell As Range
     Dim codeKey As Variant
-    Dim absenceCode As AbsenceCode
+    Dim currentAbsenceCode As AbsenceCode
 
     For Each currentCell In weeklyTable.DataBodyRange.Cells
         For Each codeKey In absenceCodes.Keys
-            Set absenceCode = absenceCodes(codeKey)
+            Set currentAbsenceCode = absenceCodes(codeKey)
 
-            If currentCell.value = absenceCode.ShortForm Then
-                currentCell.value = absenceCode.LongForm
+            If currentCell.value = currentAbsenceCode.ShortForm Then
+                currentCell.value = currentAbsenceCode.LongForm
                 Exit For
             End If
         Next codeKey

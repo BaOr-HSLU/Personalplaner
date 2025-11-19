@@ -401,21 +401,21 @@ Public Sub ApplyConditionalFormattingToTables(Optional ByVal useShortForm As Boo
 
     '--- Apply conditional formatting for each code
     Dim codeKey As Variant
-    Dim absenceCode As AbsenceCode
+    Dim currentAbsenceCode As AbsenceCode
     Dim formatFormula As String
 
     For Each codeKey In absenceCodes.Keys
-        Set absenceCode = absenceCodes(codeKey)
+        Set currentAbsenceCode = absenceCodes(codeKey)
 
         If useShortForm Then
-            formatFormula = "=" & targetRange.Cells(1, 1).Address(False, False) & "=""" & absenceCode.ShortForm & """"
+            formatFormula = "=" & targetRange.Cells(1, 1).Address(False, False) & "=""" & currentAbsenceCode.ShortForm & """"
         Else
-            formatFormula = "=" & targetRange.Cells(1, 1).Address(False, False) & "=""" & absenceCode.LongForm & """"
+            formatFormula = "=" & targetRange.Cells(1, 1).Address(False, False) & "=""" & currentAbsenceCode.LongForm & """"
         End If
 
         With targetRange.FormatConditions.Add(Type:=xlExpression, Formula1:=formatFormula)
             .StopIfTrue = False
-            .Interior.Color = absenceCode.ColorRGB
+            .Interior.Color = currentAbsenceCode.ColorRGB
         End With
     Next codeKey
 
