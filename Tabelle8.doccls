@@ -1,70 +1,124 @@
-﻿'@Folder "WOCHENPLANER"
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "Tabelle8"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = True
+'@Folder("Worksheets.EmployeeAnalysis")
+'@ModuleDescription("Employee analysis worksheet (Auswertung Mitarbeiter) - provides filtered workload statistics and dashboards")
+
 Option Explicit
 
+'--- Constants
+Private Const MAIN_PLANNER_TABLE_NAME As String = "tblAL"
+Private Const EVALUATION_TABLE_NAME As String = "tblAuswertung"
+Private Const EMPLOYEE_NAME_COLUMN_OFFSET As Long = 6  '--- Column 7 in table (0-based offset = 6)
 
+'@Description("Filters evaluation table by selected Funktion values in ListBox")
 Private Sub ListBoxFunktion_Change()
-    ApplyTableFilter Me, "ListBoxFunktion", "Funktion"
+    FilterService.ApplyTableFilter Me, "ListBoxFunktion", "Funktion"
     Application.Calculate
 End Sub
 
+'@Description("Filters evaluation table by selected Mitarbeiter values in ListBox")
 Private Sub ListBoxMitarbeiter_Change()
-    ApplyTableFilter Me, "ListBoxMitarbeiter", "Mitarbeiter"
+    FilterService.ApplyTableFilter Me, "ListBoxMitarbeiter", "Mitarbeiter"
     Application.Calculate
 End Sub
 
+'@Description("Filters evaluation table by selected Team values in ListBox")
 Private Sub ListBoxTeam_Change()
-    ApplyTableFilter Me, "ListBoxTeam", "Team"
+    FilterService.ApplyTableFilter Me, "ListBoxTeam", "Team"
     Application.Calculate
 End Sub
 
-Public Sub Auswerten()
+'@Description("Populates evaluation table with employee data from main planner and initializes filter ListBoxes")
+'@Remarks("Reads employee names from column 7 of main planner table (tblAL) and creates evaluation rows")
+Public Sub PopulateEmployeeEvaluation()
+    On Error GoTo ErrorHandler
+
+    '--- Store original application state
+    Dim originalScreenUpdating As Boolean
+    Dim originalCalculation As XlCalculation
+    Dim originalEnableEvents As Boolean
+    Dim originalDisplayAlerts As Boolean
+
+    originalScreenUpdating = Application.ScreenUpdating
+    originalCalculation = Application.Calculation
+    originalEnableEvents = Application.EnableEvents
+    originalDisplayAlerts = Application.DisplayAlerts
+
+    '--- PERFORMANCE: Disable UI updates for 200+ employees
     Application.ScreenUpdating = False
     Application.Calculation = xlCalculationManual
-    Application.StatusBar = "Auswertung gestartet"
     Application.EnableEvents = False
     Application.DisplayAlerts = False
-    'On Error GoTo ErrHandler
-    
-    Dim lo                             As ListObject, loMAB As ListObject
-    Dim rng                            As Range
-    Dim arr                            As Variant
-    Dim i                              As Long
-    Dim MABCount As Long
-    
-    ' Tabelle referenzieren
-    Set lo = Tabelle3.ListObjects("tblAL")
-    MABCount = lo.ListRows.Count
-    Set loMAB = Me.ListObjects("tblAuswertung")
-    
-    If loMAB.ListRows.Count > 0 Then
-        loMAB.DataBodyRange.Delete
+    Application.StatusBar = "Auswertung gestartet"
+
+    '--- Reference main planner table
+    Dim mainPlannerTable As ListObject
+    Set mainPlannerTable = Tabelle3.ListObjects(MAIN_PLANNER_TABLE_NAME)
+
+    Dim employeeCount As Long
+    employeeCount = mainPlannerTable.ListRows.Count
+
+    '--- Reference evaluation table
+    Dim evaluationTable As ListObject
+    Set evaluationTable = Me.ListObjects(EVALUATION_TABLE_NAME)
+
+    '--- Clear existing evaluation data
+    If evaluationTable.ListRows.Count > 0 Then
+        evaluationTable.DataBodyRange.Delete
     End If
-    
-    ' Bereich: erste Spalte + Offset 5 Spalten (also Spalte 6 der Tabelle)
-    Set rng = lo.DataBodyRange.Columns(1).offset(0, 6)
-    
-    ' Werte als Array (2D)
-    arr = rng.Value2
-    
-    ' Array durchlaufen und Einträge hinzufügen
-    For i = LBound(arr, 1) To UBound(arr, 1)
-    Application.StatusBar = "Auswertung " & i & " von " & MABCount
-        If Len(Trim$(arr(i, 1))) > 0 Then
-            loMAB.ListRows.Add.Range(1, 2).Value = CStr(arr(i, 1))
+
+    '--- Read employee names from column 7 (0-based offset = 6)
+    Dim employeeNameRange As Range
+    Set employeeNameRange = mainPlannerTable.DataBodyRange.Columns(1).Offset(0, EMPLOYEE_NAME_COLUMN_OFFSET)
+
+    '--- PERFORMANCE: Read entire range into array
+    Dim employeeNamesArray As Variant
+    employeeNamesArray = employeeNameRange.Value2
+
+    '--- Process each employee and add to evaluation table
+    Dim rowIndex As Long
+    Dim employeeName As String
+
+    For rowIndex = LBound(employeeNamesArray, 1) To UBound(employeeNamesArray, 1)
+        Application.StatusBar = "Auswertung " & rowIndex & " von " & employeeCount
+
+        employeeName = Trim$(CStr(employeeNamesArray(rowIndex, 1)))
+
+        '--- Only add non-empty employee names
+        If Len(employeeName) > 0 Then
+            evaluationTable.ListRows.Add.Range(1, 2).Value = employeeName
         End If
-    Next i
-    
+    Next rowIndex
+
+    '--- Recalculate to populate formulas in evaluation table
     Application.Calculate
-    InitListBox Me, "ListBoxMitarbeiter", "Mitarbeiter"
-    InitListBox Me, "ListBoxFunktion", "Funktion"
-    InitListBox Me, "ListBoxTeam", "Team"
-    
-    Application.EnableEvents = True
+
+    '--- Initialize filter ListBoxes with unique values
+    WeeklySheetService.InitializeFilterListBox Me, "ListBoxMitarbeiter", "Mitarbeiter"
+    WeeklySheetService.InitializeFilterListBox Me, "ListBoxFunktion", "Funktion"
+    WeeklySheetService.InitializeFilterListBox Me, "ListBoxTeam", "Team"
+
+CleanupAndExit:
+    '--- Restore application state
+    Application.StatusBar = False
+    Application.EnableEvents = originalEnableEvents
+    Application.DisplayAlerts = originalDisplayAlerts
+    Application.ScreenUpdating = originalScreenUpdating
+    Application.Calculation = originalCalculation
+
+    '--- Final recalculation to ensure all formulas are current
     Me.Calculate
-    Application.DisplayAlerts = True
-    Application.ScreenUpdating = True
-    Application.Calculation = xlCalculationManual
+
     Exit Sub
-ErrHandler:
+
+ErrorHandler:
     MsgBox "Fehler beim Laden der Mitarbeiter: " & Err.Description, vbCritical, "Fehler"
+    Resume CleanupAndExit
 End Sub
