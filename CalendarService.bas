@@ -91,6 +91,8 @@ Public Sub CreateWorkDayCalendar(ByVal startCell As Range)
             Application.StatusBar = currentYear & " / " & currentMonth & " / " & currentCalendarWeek & " / " & currentDate
 
             '--- FIX #3 & #7: Write weekday name (MO/DI/MI/DO/FR) instead of day number
+            '--- FIX: Format as Text FIRST to prevent Excel from interpreting as date
+            targetSheet.Cells(currentRow, currentColumn).NumberFormat = "@"
             targetSheet.Cells(currentRow, currentColumn).Value = Format(currentDate, "ddd")
             targetSheet.Cells(currentRow, currentColumn).HorizontalAlignment = xlCenter
             targetSheet.Cells(currentRow, currentColumn).Font.Bold = True
@@ -191,7 +193,8 @@ Public Sub CreateWorkDayCalendar(ByVal startCell As Range)
     Call ApplyConditionalFormattingToTables
     Call ApplyDataValidationToTables
 
-    Tabelle1.Activate
+    '--- FIX: Stay on Personalplaner instead of switching to Tabelle1
+    Tabelle3.Activate
 End Sub
 
 '@Description("Clears existing calendar elements to avoid conflicts")
@@ -221,7 +224,7 @@ End Sub
 
 '@Description("Extends all ListObjects on the sheet to include calendar columns")
 '@Param targetSheet The worksheet containing the tables
-'@Param dataRow The row where employee data starts
+'@Param dataRow The row where employee data starts (not used, kept for compatibility)
 '@Param firstColumn The first calendar column
 '@Param lastColumn The last calendar column
 Private Sub ExtendListObjectsToCalendar(ByVal targetSheet As Worksheet, _
@@ -232,17 +235,20 @@ Private Sub ExtendListObjectsToCalendar(ByVal targetSheet As Worksheet, _
 
     Dim listObj As ListObject
     For Each listObj In targetSheet.ListObjects
-        '--- Check if this table includes the data row
+        '--- FIX: Extend ALL tables on the sheet to the last calendar column
+        '--- This ensures that all employee tables include the full calendar
         If Not listObj.DataBodyRange Is Nothing Then
-            If listObj.DataBodyRange.Row <= dataRow And _
-               listObj.DataBodyRange.Row + listObj.DataBodyRange.Rows.Count - 1 >= dataRow Then
+            '--- Calculate new range: from table start to last calendar column
+            Dim newRange As Range
+            Dim lastRow As Long
+            lastRow = listObj.Range.Row + listObj.Range.Rows.Count - 1
 
-                '--- Extend table to include all calendar columns
-                Dim newRange As Range
-                Set newRange = targetSheet.Range( _
-                    listObj.Range.Cells(1, 1), _
-                    targetSheet.Cells(listObj.Range.Row + listObj.Range.Rows.Count - 1, lastColumn))
+            Set newRange = targetSheet.Range( _
+                listObj.Range.Cells(1, 1), _
+                targetSheet.Cells(lastRow, lastColumn))
 
+            '--- Only resize if the new range is actually larger
+            If newRange.Columns.Count > listObj.Range.Columns.Count Then
                 listObj.Resize newRange
             End If
         End If
@@ -398,8 +404,16 @@ Private Sub MarkVacationPeriod(ByVal targetSheet As Worksheet, _
 
     '--- Mark vacation period
     If firstColumn > 0 And lastColumn >= firstColumn Then
-        With targetSheet.Range(targetSheet.Cells(datesRowNumber - 4, firstColumn), _
-                               targetSheet.Cells(datesRowNumber - 4, lastColumn))
+        '--- FIX: Unmerge existing cells first to avoid conflicts
+        Dim vacationRange As Range
+        Set vacationRange = targetSheet.Range(targetSheet.Cells(datesRowNumber - 4, firstColumn), _
+                                               targetSheet.Cells(datesRowNumber - 4, lastColumn))
+
+        On Error Resume Next
+        vacationRange.UnMerge
+        On Error GoTo 0
+
+        With vacationRange
             .Merge
             .Value = vacationName
             .Font.Size = 6
