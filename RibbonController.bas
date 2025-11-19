@@ -69,19 +69,19 @@ End Sub
 
 '@Description("Callback: Controls visibility based on active sheet")
 'NOTE: CUSTOMUI XML CALLBACK: getVisible="GetControlVisibility"
-Public Sub GetControlVisibility(ByVal control As IRibbonControl, ByRef returnVisible As Boolean)
+Public Sub GetControlVisibility(ByVal control As IRibbonControl, ByRef returnedVal As Boolean)
     Select Case control.id
         Case "TabDashboard"
             'NOTE: CUSTOMUI XML: control id="TabDashboard"
-            returnVisible = True
+            returnedVal = True
 
         Case "TabWeeklyPlan"
             'NOTE: CUSTOMUI XML: control id="TabWeeklyPlan"
             '--- Only show when in a KW sheet
-            returnVisible = (ActiveSheet.Name Like "KW*")
+            returnedVal = (ActiveSheet.Name Like "KW*")
 
         Case Else
-            returnVisible = True
+            returnedVal = True
     End Select
 End Sub
 
@@ -290,3 +290,4 @@ ErrorHandler:
            "Fehler: " & Err.Description, _
            vbCritical, "Wochenliste-Fehler"
 End Sub
+
