@@ -210,3 +210,35 @@ Public Sub InitializeFilterListBox( _
         listBox.AddItem CStr(uniqueKey)
     Next uniqueKey
 End Sub
+
+'@Description("Finds the starting column of the previous calendar week")
+'@Param targetSheet The worksheet to search (typically main planner)
+'@Returns Column number of previous week's first day, or 0 if not found
+Public Function FindPreviousWeekStartColumn(ByVal targetSheet As Worksheet) As Long
+    On Error Resume Next
+
+    '--- Get today's date
+    Dim todayDate As Date
+    todayDate = Date
+
+    '--- Find today's column in the main planner
+    Dim todayColumn As Long
+    todayColumn = DateHelpers.FindDateColumn(targetSheet, 10, todayDate, 15)
+
+    If todayColumn = 0 Then
+        '--- If today not found, return 0 (no column restriction)
+        FindPreviousWeekStartColumn = 0
+        Exit Function
+    End If
+
+    '--- Calculate previous week start (5 workdays back = 1 week)
+    Dim previousWeekColumn As Long
+    previousWeekColumn = todayColumn - 5
+
+    '--- Ensure we don't go below minimum column
+    If previousWeekColumn < 15 Then
+        previousWeekColumn = 15  '--- Column O is first date column
+    End If
+
+    FindPreviousWeekStartColumn = previousWeekColumn
+End Function
