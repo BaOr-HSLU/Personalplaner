@@ -1,5 +1,8 @@
 # Personalplaner - AI Assistant Guide
 
+**Version**: 2.0 (Refactored)
+**Last Updated**: 2025-11-19
+
 ## Project Overview
 
 **Personalplaner** (Personnel Planner) is an Excel VBA-based personnel management and scheduling system designed for Swiss organizations. The application manages employee schedules, absences, projects, workload calculations, and generates weekly reports (Wochenrapporte).
@@ -7,226 +10,702 @@
 **Language**: German (Switzerland)
 **Platform**: Microsoft Excel with VBA (Visual Basic for Applications)
 **Version**: VBA7 compatible (64-bit Excel)
+**Architecture**: Refactored with clean service-oriented architecture and domain models
 
 ## Project Purpose
 
 The system provides:
-- Employee scheduling across calendar weeks (Kalenderwochen/KW)
-- Absence tracking (vacations, sick days, military service, etc.)
-- Project assignment and time tracking
-- Workload and capacity calculations
-- Automated weekly report generation
-- Email notifications for report submissions
-- Custom Excel ribbon UI for navigation
+- **Yearly calendar creation** with work days only (Mon-Fri)
+- **Employee scheduling** across calendar weeks (Kalenderwochen/KW)
+- **Absence tracking** (vacations, sick days, military service, school, etc.)
+- **Project assignment** and time tracking
+- **Workload and capacity calculations** with Excel UDFs
+- **Automated weekly report generation** (Wochenrapporte)
+- **Email notifications** with UTF-8 encoding for German umlauts
+- **Custom Excel Ribbon UI** for navigation and quick actions
+- **Filtering and data analysis** with ActiveX ListBox controls
 
 ## Architecture Overview
 
-### Core Structure
+### Core Structure (Refactored)
 
-The project is organized in a **version-controlled VBA format** where each module, class, and form is stored as individual files:
+The project follows a **clean architecture** with separation of concerns:
 
 ```
 Personalplaner/
-├── DieseArbeitsmappe.doccls    # Workbook events and initialization
-├── CustomUI.bas                 # Custom Excel Ribbon UI
-├── Modul1-5.bas                # Legacy/utility modules
-├── m*.bas                       # Feature modules (calendar, calculations, filtering)
-├── UF_*.frm/frx                # UserForms and their binary data
-├── Tabelle*.doccls             # Worksheet class modules
-└── shWRTemplate.doccls         # Weekly report template sheet
+├── Domain Models (Classes)
+│   ├── AbsenceCode.cls          # Absence code domain model (F, K, U, WK, S, UK, T)
+│   ├── Employee.cls             # Employee domain model with contact parsing
+│   └── Project.cls              # Project domain model
+│
+├── Services (Business Logic)
+│   ├── CalendarService.bas      # Calendar creation, holidays, formatting
+│   ├── DateHelpers.bas          # Date calculations and dictionary sorting
+│   ├── EmailService.bas         # PDF export and email sending
+│   ├── EmployeeService.bas      # Employee data collection (optimized)
+│   ├── FilterService.bas        # Table filtering with ListBox controls
+│   ├── ProjectService.bas       # Project management and storage
+│   ├── ValidationHelpers.bas    # Data validation utilities
+│   ├── WeeklyReportService.bas  # Weekly report generation
+│   ├── WeeklySheetService.bas   # KW sheet creation from template
+│   └── WorkloadCalculations.bas # UDFs for Excel formulas
+│
+├── UI Layer
+│   ├── RibbonController.bas     # Custom Ribbon callbacks
+│   ├── UF_Filter.frm            # Filter form
+│   ├── UF_Projekte.frm          # Project selection form
+│   └── UF_ProjektErstellen.frm  # Project creation form
+│
+├── Worksheets
+│   ├── DieseArbeitsmappe.doccls # Workbook events
+│   ├── Tabelle3.doccls          # Main Personalplaner sheet
+│   ├── Tabelle7.doccls          # KW template sheet
+│   ├── Tabelle8.doccls          # Employee analysis sheet
+│   ├── Diagramm1.doccls         # Chart sheet
+│   └── shWRTemplate.doccls      # Weekly report template
+│
+└── Configuration
+    └── customUI.xml             # Ribbon XML definition
 ```
 
 ### Key Technologies
 
 - **VBA 7** (64-bit compatible with LongPtr declarations)
-- **Scripting.Dictionary** for data collections and caching
-- **ListObjects** (Excel Tables) for structured data
-- **Outlook Integration** for email automation
+- **Scripting.Dictionary** for O(1) lookups and caching
+- **ListObjects** (Excel Tables) for structured data management
+- **Outlook Integration** (late binding) for email automation
 - **Custom Ribbon XML** for UI customization
-- **Named Ranges** for dynamic references
+- **Named Ranges** ("TAGE", "RibbonID") for dynamic references
+- **Array Processing** for performance (200+ employees over 5 years)
+- **Rubberduck Annotations** (@Folder, @Description, @Param, @Returns)
 
-## File Organization and Responsibilities
+## Domain Models
 
-### Workbook Events (`DieseArbeitsmappe.doccls`)
+### AbsenceCode.cls
 
-**Purpose**: Application initialization and global event handlers
+**@Folder**: "Domain.Models"
 
-**Key Features**:
-- Sets calculation to Manual on workbook open for performance
-- Shows/hides UserForms (UF_Filter, UF_Projekte) based on active sheet
-- Refreshes custom ribbon on sheet activation
+**Purpose**: Represents absence codes with colors and descriptions
 
-### Core Modules
+**Properties**:
+- `ShortForm`: "F", "K", "U", "WK", "S", "UK", "T"
+- `LongForm`: Full text (e.g., "Ferien", "Krank", "Unfall")
+- `Description`: Detailed explanation
+- `ColorRGB`: RGB color for conditional formatting
 
-#### `mKalender.bas` - Calendar Management
-**@Folder**: "Personalplaner"
-
-**Key Functions**:
-- `ErstelleKalenderMitArbeitstagen()`: Creates calendar with weekdays only (Mon-Fri)
-- `FerienUndFeiertageEintragen()`: Marks holidays and school vacations
-- `BedingteFormatierungMitDropdownsInTabellen()`: Applies conditional formatting and dropdowns
-
-**Important Constants**:
-- `anzahlZeilen = 50`: Number of employee rows in weekly plans
+**Key Method**:
+- `GetAllCodes()`: Returns Dictionary of all absence codes
 
 **Absence Codes**:
-- `F` = Ferien (Vacation)
-- `Fx` = Ferien nicht bewilligt (Vacation not approved)
-- `U` = Unfall (Accident)
-- `K` = Krank (Sick)
-- `WK` = Militär (Military service)
-- `S` = Schule (School)
-- `ÜK` = Überbetr. Kurs (Inter-company course)
-- `T` = Teilzeit (Part-time)
+| Code | ShortForm | LongForm | Description | Color |
+|------|-----------|----------|-------------|-------|
+| F | F | Ferien | Vacation | Light Blue |
+| Fx | Fx | Ferien nicht bewilligt | Vacation not approved | Orange |
+| K | K | Krank | Sick | Yellow |
+| U | U | Unfall | Accident | Red |
+| WK | WK | Militär | Military service | Green |
+| S | S | Schule | School | Light Green |
+| UK | UK | Überbetr. Kurs | Inter-company course | Beige |
+| T | T | Teilzeit | Part-time | Gray |
 
-#### `mBerechnung.bas` - Calculations and Formulas
-**@Folder**: "FORMELN"
+### Employee.cls
 
-**Key UDFs (User Defined Functions)**:
-- `VerweisMABAuslastungTotal()`: Retrieves workload values by date with column offset
-- `FindeDatumsspalte()`: Robust date column finder (handles text and date formats)
-- `AbwesendeMAB()`: Counts absent employees on a given date
-- `ZaehleCodes()`: Counts cells with specific absence codes
-- `AuslastungMitAusschluss()`: Calculates workload excluding specified absence types
-- `VerfuegbareMitarbeiter()`: Counts available employees
+**@Folder**: "Domain.Models"
 
-**Important Notes**:
-- Functions handle merged date headers
-- Date comparisons ignore time portions using `Int(CDbl(date))`
-- Supports both numeric dates and text date formats (dd.mm.yyyy)
-- Uses `Application.Volatile True` for real-time calculations
+**Purpose**: Employee domain model with contact information parsing
 
-#### `mAuslastung.bas` - Capacity Calculations
-**@Folder**: "FORMELN"
+**Properties**:
+- `EmployeeNumber`: Unique employee ID
+- `DisplayName`: Employee name (first line)
+- `PhoneNumber`: Phone contact (second line)
+- `EmailAddress`: Email address (third line)
+- `Function`: Job function/role
+- `Team`: Team assignment
 
-**Purpose**: Specialized workload calculations referencing `Tabelle3` (main personnel sheet)
+**Key Methods**:
+- `ParseFromCellValue(cellValue)`: Parses multi-line cell (Name\nPhone\nEmail)
+- `ToMultiLineString()`: Converts back to multi-line format
 
-**Key Functions**:
-- Similar to `mBerechnung.bas` but hardcoded to specific worksheets
-- References `Tabelle3` by CodeName (not sheet name)
+**Note**: Employee cells use `vbNewLine` (Chr(10)) to separate lines
 
-#### `mKWBlatt.bas` - Weekly Sheet Management
-**@Folder**: "Personalplaner"
+### Project.cls
 
-**Key Functions**:
-- `NeuesKWBlattErstellen()`: Creates new weekly planning sheet from template
-- `InitListBox()`: Populates ActiveX ListBox controls with unique values
-- `AnfangsspalteVorherigeKW()`: Finds column of previous calendar week
+**@Folder**: "Domain.Models"
 
-**Workflow**:
-1. Copies template sheet (`Tabelle7`)
-2. Names sheet as `KW{number} {year}` (e.g., "KW15 2025")
-3. Populates employee data from main planner
-4. Applies conditional formatting
-5. Initializes filter ListBoxes
+**Purpose**: Project domain model with commission number and remarks
 
-#### `mWertesammler.bas` - Data Collection Utilities
-**@Folder**: "Personalplaner"
+**Properties**:
+- `ProjectName`: Project name/description
+- `CommissionNumber`: Commission/order number
+- `Remarks`: Additional notes
 
-**Key Functions**:
-- `SammleEindeutigeWerteSchnell()`: Collects unique values from table columns
-- `SammleEindeutigeWerteSchnellRng()`: Collects unique values from a range
-  - Supports `includeHidden` parameter to skip hidden rows
-  - Supports `OnlyFirstLine` to extract first line before line break (`Chr(10)`)
+**Key Methods**:
+- `Create()`: Factory method for creating instances
+- `ToStorageString()`: Serializes to "CommissionNumber;Remarks" format
+- `ParseFromStorageString()`: Deserializes from storage format
 
-**Performance Optimizations**:
-- Reads entire tables into arrays for speed
-- Uses Dictionary for O(1) uniqueness checks
-- Disables screen updating and events during processing
+## Service Modules
 
-#### `mFormatierung.bas` - Formatting Utilities
-**@Folder**: "FORMAT"
+### CalendarService.bas
 
-**Key Functions**:
-- `ErsteZeileImBereichFett()`: Makes first line of multi-line cells bold
+**@Folder**: "Services.Calendar"
+**Module**: Replaces old `mKalender.bas`
 
-**Use Case**: Employee names with contact info on separate lines
+**Purpose**: Creates and manages calendar sheets with work days, holidays, and formatting
 
-#### `Modul5.bas` - Weekly Report Automation
+**Key Constants**:
+- `EMPLOYEE_ROWS_COUNT = 50`: Number of employee rows
+- `DATE_ROW_OFFSET = -1`: Date row relative to data start
+- `CALENDAR_WEEK_ROW_OFFSET = -2`: KW row offset
+- `MONTH_ROW_OFFSET = -3`: Month row offset
 
-**Key Procedures**:
-- `WR_Anfordern()`: Sends email reminder to all employees for weekly report submission
-  - Extracts email addresses from 3rd line of employee name cells (split by `vbNewLine`)
-  - Creates single email with all recipients in TO field
-  - Skips employees marked in column K (skip flag)
+**Public Functions**:
 
-- `WR_Erstellen()`: Generates individual weekly reports for all employees
-  - Creates new workbook with sheets per employee
-  - Copies project data and hours from weekly plan
-  - Handles special absences (Krank, Unfall, Militär, Ferien)
-  - Prompts for project commission numbers and remarks
-  - Saves as `Wochenrapporte_{KW}.xlsm`
+#### `CreateWorkDayCalendar(startCell As Range)`
+Creates a calendar with work days only (Monday-Friday)
+- Prompts user for start/end date
+- Clears existing calendar elements
+- Creates columns for each weekday
+- Formats cells with weekday names (MO, DI, MI, DO, FR) as TEXT
+- Merges cells for KW, month, year headers
+- Adds dotted borders between days, solid borders between weeks
+- Extends all ListObjects to include calendar columns
+- Sets column width to 2.0
+- Applies conditional formatting and data validation dropdowns
+- Optionally adds holidays and vacations
 
-**Important Data Structure**:
-- Employee names stored as multi-line cells:
-  ```
-  Line 1: Display Name
-  Line 2: Phone Number
-  Line 3: Email Address
-  ```
+**IMPORTANT**: Date cells are formatted as TEXT (`NumberFormat = "@"`) to prevent Excel from interpreting "Di" as February date.
 
-#### `mFilter.bas`, `mDatenüberprüfung.bas`, `Modul1-4.bas`
+#### `AddHolidaysAndVacations()`
+Adds holidays and school vacations to the calendar
+- Reads from "Feiertage" and "Ferien" tables in Tabelle1
+- Marks holidays with colored background
+- Merges vacation period cells (properly unmerges first to avoid conflicts)
 
-**Note**: These modules contain additional filtering, validation, and helper functions. Implementation details should be examined when working with filtering and data validation features.
+#### `ApplyConditionalFormattingToTables(Optional useShortForm, Optional startColumnIndex)`
+Applies color-coded conditional formatting for absence codes
+- Iterates through all ListObjects
+- Creates formatting rules for each absence code
+- Uses colors from AbsenceCode class
+
+#### `ApplyDataValidationToTables(Optional startColumnIndex)`
+Adds dropdown menus with absence codes
+- Builds comma-separated list of all absence codes
+- Applies Excel data validation to calendar columns
+- Sets `InCellDropdown = True` for visible dropdown arrows
+
+**Private Functions**:
+- `ClearExistingCalendar()`: Deletes named range and clears area before recreation
+- `ExtendListObjectsToCalendar()`: Extends all tables to last calendar column
+- `FinalizeCalendarWeek()`: Merges and formats KW header
+- `FinalizeMonth()`: Merges and formats month header
+- `MarkVacationPeriod()`: Marks vacation period with merged cells
+- `MarkHoliday()`: Marks single holiday
+- `GetDateForColumn()`: Calculates actual date from weekday name and KW
+
+### DateHelpers.bas
+
+**@Folder**: "Services.Utilities"
+**Module**: Replaces old `mBerechnung.bas` (partial) and `Modul2.bas`
+
+**Purpose**: Date finding, formatting, and dictionary sorting utilities
+
+**Public Functions**:
+
+#### `FindDateColumn(targetSheet, headerRowNumber, searchDate, [firstColumnToSearch], [lastColumnToSearch]) As Long`
+Robust date column finder (handles text and date formats)
+- **Strategy 1**: Direct MATCH on numeric date serial
+- **Strategy 2**: MATCH on text representation
+- **Strategy 3**: Manual loop (handles dates with time, convertible text)
+- Returns column number or 0 if not found
+
+#### `FormatFirstLineBold(targetRange)`
+Makes first line of multi-line cells bold
+- Splits on `vbNewLine` (Chr(10))
+- Sets bold formatting only for first line
+- Used for employee names with contact info
+
+#### `SortDictionaryAlphabetical(sourceDict) As Dictionary`
+Sorts a Dictionary alphabetically by keys
+- Returns new Dictionary with sorted keys
+- Used for filter lists and data display
+
+### EmployeeService.bas
+
+**@Folder**: "Services.Employee"
+**Module**: Replaces old `mWertesammler.bas`
+
+**Purpose**: High-performance employee data collection optimized for 200+ employees over 5 years
+
+**Public Functions**:
+
+#### `GetUniqueValuesFromRange(targetRange, [includeHidden], [extractFirstLineOnly]) As Dictionary`
+Collects unique values from a range
+- **Performance**: Processes via array (fast) if includeHidden=True
+- **Performance**: Uses row-by-row iteration if hidden rows excluded
+- **extractFirstLineOnly**: Extracts only first line before `vbNewLine` (for employee names)
+- Returns Dictionary with unique values as keys
+
+#### `GetUniqueValuesFromListObjects([startColumn]) As Dictionary`
+Collects unique values from all ListObjects on active sheet
+- Merges data from all tables
+- Optionally filters by column index
+- Returns sorted Dictionary
+
+**Important**: Uses Scripting.Dictionary for O(1) uniqueness checks
+
+### ProjectService.bas
+
+**@Folder**: "Services.Project"
+
+**Purpose**: Project CRUD operations with user prompts
+
+**Public Functions**:
+
+#### `GetProjectSheet() As Worksheet`
+Locates the "Projektnummern" worksheet
+- Returns wsProjekte CodeName reference
+- Used by WeeklyReportService to avoid "Blatt nicht gefunden" errors
+
+#### `LoadProject(projectName) As Project`
+Loads project from project sheet
+- Searches for project by name
+- Returns Project object or Nothing
+
+#### `SaveProject(project As Project)`
+Saves project to project sheet
+- Adds new project or updates existing
+- Stores in ListObject "Projektnummern"
+
+#### `PromptForProjectDetails(projectName) As Project`
+Prompts user for commission number and remarks
+- Checks if project exists
+- Asks user if they want to reuse existing data
+- Returns Project object
+
+### WeeklyReportService.bas
+
+**@Folder**: "Services.WeeklyReport"
+**Module**: Replaces old `Modul5.bas`
+
+**Purpose**: Automated weekly report generation and email reminders
+
+**Public Functions**:
+
+#### `CreateWeeklyReports()`
+Generates individual weekly reports for all employees
+- Collects unique projects from columns E:I
+- Prompts for commission numbers for new projects (uses ProjectService)
+- Creates new workbook `Wochenrapporte_{KW}.xlsm`
+- For each employee:
+  - Copies shWRTemplate
+  - Populates header (name, dates, KW)
+  - Transfers daily project hours
+  - Maps absences to special rows (26=Ferien, 27=Militär, 28=Unfall, 29=Krank)
+
+#### `SendWeeklyReportReminder()`
+Sends email reminder to all employees for weekly report submission
+- Extracts email from 3rd line of employee name cells
+- Creates Outlook email with all recipients in TO field
+- **Uses HTMLBody with UTF-8** to properly display German umlauts
+- Displays email for review (user must manually send)
+
+**Important Email Encoding**:
+```vba
+'--- Correct UTF-8 encoding
+emailBodyHTML = "<!DOCTYPE html>" & vbNewLine & _
+                "<html>" & vbNewLine & _
+                "<head>" & vbNewLine & _
+                "<meta charset=""UTF-8"">" & vbNewLine & _
+                "</head>" & vbNewLine & _
+                "<body>..." & vbNewLine & _
+                "</body></html>"
+
+mailItem.HTMLBody = emailBodyHTML  '--- NOT .Body!
+```
+
+### WeeklySheetService.bas
+
+**@Folder**: "Services.WeeklySheet"
+**Module**: Replaces old `mKWBlatt.bas`
+
+**Purpose**: Creates KW (calendar week) sheets from template
+
+**Public Functions**:
+
+#### `CreateWeeklySheet(selectedCell As Range)`
+Creates new weekly planning sheet from template
+- Parses calendar week number from cell
+- Gets week start/end dates
+- Checks if sheet already exists (if yes, activates it)
+- Copies Tabelle7 template
+- Names sheet as "KW{number} {year}"
+- Populates employee data from main planner
+- Replaces short absence codes with long form text
+- Applies conditional formatting (useShortForm=False)
+- Initializes filter ListBoxes
+- **Refreshes Ribbon** to update TabWeeklyPlan visibility
+
+#### `InitializeFilterListBox(targetSheet, listBoxName, columnName)`
+Populates ActiveX ListBox with unique values from table column
+- Used for "ListBoxFunktion" and "ListBoxTeam" filters
+- Reads from first ListObject on sheet
+- Extracts first line only (for employee names)
+
+#### `FindPreviousWeekStartColumn(targetSheet) As Long`
+Finds the starting column of the previous calendar week
+- Used by filter to restrict visible data to recent dates
+- Returns column number or 0 if today not found
+
+**Private Functions**:
+- `CopyEmployeeDataToWeeklySheet()`: Copies employee data for 5 weekdays
+- `ReplaceAbsenceCodesWithLongForm()`: Replaces "F" with "Ferien", etc.
+
+### WorkloadCalculations.bas
+
+**@Folder**: "Services.Formulas"
+**Module**: Replaces old `mBerechnung.bas`, `mAuslastung.bas`, `Modul3.bas`
+
+**Purpose**: UDFs (User Defined Functions) for Excel formulas - workload, availability, day counting
+
+**Public UDFs**:
+
+#### `GetWorkloadByDate(targetDate, [columnOffset]) As Double`
+Retrieves workload values by date with column offset
+- Searches in Tabelle3 (main planner)
+- Uses DateHelpers.FindDateColumn
+- Supports column offset for accessing different data columns
+- `Application.Volatile True` for real-time updates
+
+#### `CalculateWorkload(targetDate, exclusionCriteria) As Double`
+Calculates workload excluding specified absence types
+- Parses exclusion criteria (semicolon-separated: "F;K;U")
+- Counts employees excluding those with specified absence codes
+- Used for capacity planning
+
+#### `CountAvailableEmployees(targetDate, [columnOffset]) As Long`
+Counts available employees on a given date
+- Excludes all absence codes
+- Used for resource allocation
+
+#### `CountEmployeeDays(employeeName, filterCriteria) As Double`
+Counts days matching criteria for an employee
+- **filterCriteria = "Frei"**: Counts blank cells
+- **filterCriteria = "Projekt"**: Counts cells with project codes (excludes absences)
+- **filterCriteria = custom**: Semicolon-separated codes to count
+
+**Performance Note**: All UDFs use `Application.Volatile True` and CodeName references (Tabelle3) for speed.
+
+### EmailService.bas
+
+**@Folder**: "Services.Email"
+**Module**: New, extracted from `Modul4.bas`
+
+**Purpose**: PDF export and email sending functionality
+
+**Public Functions**:
+
+#### `SendWeeklyPlanPDFToEmployees()`
+Exports active sheet as PDF and creates email with attachments
+- Exports to PDF in same directory as workbook
+- Collects unique employee emails from filtered data
+- Creates Outlook email with all recipients
+- **Uses HTMLBody with UTF-8** for German umlauts
+- Attaches PDF file
+- Displays email for review
+
+### FilterService.bas
+
+**@Folder**: "Services.Filtering"
+**Module**: Replaces old `mFilter.bas`
+
+**Purpose**: Table filtering using ActiveX ListBox controls
+
+**Public Functions**:
+
+#### `ApplyTableFilter(targetSheet, listBoxName, columnName)`
+Applies filter to first ListObject based on selected ListBox items
+- Gets ActiveX ListBox from sheet
+- Builds array of selected values
+- Applies AutoFilter with `xlFilterValues` operator
+- Used by "ListBoxFunktion" and "ListBoxTeam" in worksheet event handlers
+
+### ValidationHelpers.bas
+
+**@Folder**: "Services.Utilities"
+**Module**: Replaces old `mDatenüberprüfung.bas`
+
+**Purpose**: Data validation helper functions
+
+**Public Functions**:
+- `RemoveDataValidation(targetRange)`: Deletes validation from range
+- `HasListValidation(targetCell) As Boolean`: Checks if cell has list validation
+- `AddListValidation(targetRange, listItems)`: Adds dropdown validation
+
+## UI Layer
+
+### RibbonController.bas
+
+**@Folder**: "UI.Ribbon"
+**Module**: Replaces old `CustomUI.bas`
+
+**Purpose**: Manages Custom Ribbon UI interactions and navigation
+
+**CRITICAL**: Control IDs in this module must match customUI.xml ribbon configuration!
+
+**Callback Functions** (EXACT signatures required):
+
+#### `Sub OnLoad_PersonalPlaner(ribbon As IRibbonUI)`
+Ribbon onLoad callback - initializes ribbon reference
+- Stores ribbon pointer in named range "RibbonID"
+- Sets `ribbonUI` module variable
+
+#### `Sub OnRibbonButtonClick(control As IRibbonControl)`
+Handles all button clicks via control.id
+- **Navigation**: BtnGoToToday, BtnShowOverview, BtnShowDashboard, BtnShowChart
+- **Filter/Projects**: BtnShowFilter, BtnShowProjects, BtnProjectInput
+- **Settings**: BtnShowSettings (placeholder)
+- **Calculation**: BtnRecalculate (uses ActiveSheet.Calculate for performance)
+- **Weekly Reports**: BtnSendWeeklyPlan, BtnRequestWeeklyReports, BtnCreateWeeklyReports
+- **Calendar**: BtnCreateCalendar, BtnOpenCurrentWeek (NEW!)
+
+#### `Sub GetControlVisibility(control As IRibbonControl, ByRef returnedVal As Boolean)`
+Controls visibility based on active sheet
+- **TabDashboard**: Always visible (True)
+- **TabWeeklyPlan**: Only visible for KW sheets (ActiveSheet.Name Like "KW*")
+
+**Public Functions**:
+
+#### `RefreshRibbon()`
+Refreshes the ribbon UI
+- Gets ribbon from pointer or direct reference
+- Calls `ribbonUI.Invalidate`
+- Used after creating KW sheets to update tab visibility
+
+**Private Navigation Functions**:
+- `NavigateToToday()`: Jumps to today's date in main planner
+- `NavigateToOverview()`: Shows Personalplaner, hides others
+- `NavigateToDashboard()`: Shows Auswertung Mitarbeiter
+- `NavigateToChart()`: Shows Diagramm1
+- `ShowProjectInput()`: Shows project creation form
+
+**NEW Private Functions**:
+
+#### `CreateNewCalendar()`
+Creates new yearly calendar in Personalplaner
+- Navigates to Personalplaner sheet
+- Calls `Tabelle3.CreateYearlyCalendar`
+- Shows success message
+
+#### `OpenCurrentWeeklyPlan()`
+Opens or creates the weekly plan for current calendar week
+- Finds today's date in calendar (uses DateHelpers.FindDateColumn)
+- Locates KW header cell in row 8
+- Calls `WeeklySheetService.CreateWeeklySheet`
+- **Reliable alternative to double-click** (works even if VBA errors occur)
+
+### customUI.xml
+
+**Purpose**: Excel Ribbon XML configuration
+
+**Structure**:
+```xml
+<customUI xmlns="..." onLoad="OnLoad_PersonalPlaner">
+  <ribbon>
+    <tabs>
+      <tab idQ="MARE:Mare-Tab" label="Maréchaux">
+
+        <!-- Übersicht Group -->
+        <group id="TabDashboard" getVisible="GetControlVisibility">
+          <button id="BtnGoToToday" onAction="OnRibbonButtonClick" />
+          <button id="BtnShowOverview" onAction="OnRibbonButtonClick" />
+          <button id="BtnShowDashboard" onAction="OnRibbonButtonClick" />
+          <button id="BtnShowChart" onAction="OnRibbonButtonClick" />
+          <button id="BtnShowSettings" onAction="OnRibbonButtonClick" />
+          <separator id="Separator1"/>
+          <button id="BtnShowFilter" onAction="OnRibbonButtonClick" />
+          <button id="BtnShowProjects" onAction="OnRibbonButtonClick" />
+          <button id="BtnRecalculate" onAction="OnRibbonButtonClick" />
+          <button id="BtnProjectInput" onAction="OnRibbonButtonClick" />
+          <separator id="Separator2"/>
+          <button id="BtnCreateCalendar" onAction="OnRibbonButtonClick" />
+          <button id="BtnOpenCurrentWeek" onAction="OnRibbonButtonClick" />
+        </group>
+
+        <!-- Wochenplan Group -->
+        <group id="TabWeeklyPlan" getVisible="GetControlVisibility">
+          <button id="BtnSendWeeklyPlan" onAction="OnRibbonButtonClick" />
+          <button id="BtnRequestWeeklyReports" onAction="OnRibbonButtonClick" />
+          <button id="BtnCreateWeeklyReports" onAction="OnRibbonButtonClick" />
+        </group>
+
+      </tab>
+    </tabs>
+  </ribbon>
+</customUI>
+```
+
+**CRITICAL Callback Mapping**:
+- **onLoad**: `OnLoad_PersonalPlaner` (NOT OnLoad_PERSPLA)
+- **onAction**: `OnRibbonButtonClick` (NOT onAction_PERSPLA)
+- **getVisible**: `GetControlVisibility` (NOT getVisible_PERSPLA)
 
 ### UserForms
 
-#### `UF_Filter.frm` - Filtering Interface
-**Purpose**: Provides filtering controls for the main planner view
+#### UF_Filter.frm
+**@Folder**: "UI.Forms"
 
-#### `UF_Projekte.frm` - Project Selection
-**Purpose**: Project picker for assigning employees to projects
+**Purpose**: Filtering interface for main planner view
+
+**Key Methods**:
+- `LoadFilterData([startColumn])`: Loads unique values using EmployeeService
+- Uses FilterService for applying filters
+
+#### UF_Projekte.frm
+**@Folder**: "UI.Forms"
+
+**Purpose**: Project selection form
 
 **Key Features**:
-- Loads projects from "Projektnummern" worksheet
+- `UserForm_Initialize()`: Auto-loads projects when opened (FIX for Ribbon issue)
+- `LoadProjectData()`: Populates ListBox from project sheet
 - Double-click to insert project into active cell
 - Validates cell is in correct column range (≥15 for Personalplaner, ≥5 for KW sheets)
 
-#### `UF_ProjektErstellen.frm` - Project Creation
+#### UF_ProjektErstellen.frm
+**@Folder**: "UI.Forms"
+
 **Purpose**: Form for creating new projects
 
-### Worksheet Classes
+## Worksheet Classes
 
-#### `Tabelle3.doccls` - Main Personnel Planner
-**Purpose**: Primary yearly planning sheet named "Personalplaner"
+### DieseArbeitsmappe.doccls
+
+**@Folder**: "Core"
+
+**Purpose**: Workbook event handlers
+
+**Events**:
+
+#### `Workbook_Open()`
+- Sets `Application.Calculation = xlCalculationManual` (performance for 200+ employees)
+- Enables events
+
+#### `Workbook_SheetActivate()`
+- Shows/hides UF_Filter and UF_Projekte based on active sheet
+- Refreshes custom ribbon
+
+### Tabelle3.doccls (Personalplaner)
+
+**@Folder**: "Worksheets.MainPlanner"
+**CodeName**: Tabelle3
+**Sheet Name**: "Personalplaner"
+
+**Purpose**: Main yearly planning sheet
+
+**Constants**:
+- `WEEKLY_INTERVAL = 5`: 5 workdays per week (Mon-Fri)
+- `CALENDAR_START_CELL = "O10"`: First date cell in calendar header
 
 **Structure**:
-- Row 10: Date headers
+- Row 8: KW headers (merged across 5 columns)
+- Row 9: Month headers (merged across variable columns)
+- Row 10: Date/weekday names (MO, DI, MI, DO, FR)
 - Columns A-N: Employee data (Number, Name, Function, Team, etc.)
 - Columns O+: Daily assignments (one column per weekday)
 
-#### `Tabelle7.doccls` - Weekly Template
+**Public Methods**:
+
+#### `CreateYearlyCalendar()`
+Creates the yearly calendar with work days (Mon-Fri) starting at O10
+- Calls `CalendarService.CreateWorkDayCalendar`
+
+**Event Handlers**:
+
+#### `Worksheet_Activate()`
+Initializes filter and project forms
+- Loads filter data starting from previous week
+- Loads project data
+
+#### `Worksheet_BeforeDoubleClick(Target, Cancel)`
+Creates new KW sheet when user double-clicks
+- **SCENARIO 1**: Direct KW header click (row 8 merged cell)
+- **SCENARIO 2**: ListObject cell click (FIX: extended functionality!)
+  - Finds column of clicked cell
+  - Looks up corresponding KW header in row 8
+  - Creates weekly sheet for that KW
+
+#### `Worksheet_Change(Target)`
+Handles recurring weekly entries for School (S) and Part-time (T)
+- Prompts user if they want weekly recurrence
+- Fills every 5th column (one work week)
+
+**Private Methods**:
+- `PromptAndApplyWeeklyRecurrence()`: Applies S/T to every week
+
+### Tabelle7.doccls (KW Template)
+
+**@Folder**: "Worksheets.WeeklyTemplate"
+**CodeName**: Tabelle7
+
 **Purpose**: Template for KW (calendar week) sheets
 
-#### `Tabelle8.doccls` - Employee Analysis
-**Purpose**: "Auswertung Mitarbeiter" (Employee evaluation)
+**Public Properties**:
+- `copying As Boolean`: Flag to indicate sheet is being copied
 
-#### `shWRTemplate.doccls` - Weekly Report Template
+**Event Handlers**:
+
+#### `Worksheet_Activate()`
+Initializes filter ListBoxes
+- Calls `WeeklySheetService.InitializeFilterListBox` for "ListBoxFunktion" and "ListBoxTeam"
+
+#### `ListBoxFunktion_Change()` and `ListBoxTeam_Change()`
+Apply filters using FilterService
+- Calls `FilterService.ApplyTableFilter`
+- Triggers calculation
+
+### Tabelle8.doccls (Auswertung Mitarbeiter)
+
+**@Folder**: "Worksheets.EmployeeAnalysis"
+**CodeName**: Tabelle8
+**Sheet Name**: "Auswertung Mitarbeiter"
+
+**Purpose**: Employee workload analysis and statistics
+
+**Constants**:
+- `MAIN_PLANNER_TABLE_NAME = "tblAL"`: Source table in Tabelle3
+- `EVALUATION_TABLE_NAME = "tblAuswertung"`: Target table in Tabelle8
+- `EMPLOYEE_NAME_COLUMN_OFFSET = 6`: Column 7 in table (0-based offset)
+
+**Public Methods**:
+
+#### `PopulateEmployeeEvaluation()`
+Populates evaluation table with employee data from main planner
+- Reads employee names from column 7 of tblAL
+- Clears existing evaluation data
+- Creates evaluation rows
+- **Performance**: Reads entire column into array
+- Initializes filter ListBoxes
+- Recalculates formulas
+
+**Event Handlers**:
+- `ListBoxFunktion_Change()`: Filters by function
+- `ListBoxMitarbeiter_Change()`: Filters by employee
+- `ListBoxTeam_Change()`: Filters by team
+
+### shWRTemplate.doccls (Wochenrapport Template)
+
+**@Folder**: "PDFs"
+**CodeName**: shWRTemplate
+
 **Purpose**: Template for individual employee weekly reports
 
-### Custom UI (`CustomUI.bas`)
+**Event Handlers**:
 
-**@Folder**: "CustomUI"
-
-**Purpose**: Manages Excel Ribbon customization
-
-**Key Callbacks**:
-- `OnLoad_PERSPLA()`: Initializes ribbon on workbook load
-- `getVisible_PERSPLA()`: Controls ribbon tab visibility based on active sheet
-- `onAction_PERSPLA()`: Handles button clicks
-
-**Ribbon Buttons**:
-- `TODAY`: Navigate to today's date column
-- `ÜBERSICHT`: Show home view (Personalplaner)
-- `AUSWERTUNG`: Show employee analysis dashboard
-- `DIAGRAMM`: Show charts
-- `FILTER`: Display filter UserForm
-- `PROJEKT`: Display project selection
-- `BERECHNEN`: Trigger manual calculation
-- `PROJEKTEINGABE`: Show project input form
-- `WP_SENDEN`: Send filtered PDFs to all employees
-- `WR_ANFORDERUNG`: Send weekly report reminder emails
-- `WR_ERSTELLEN`: Generate weekly reports
+#### `Worksheet_Change(Target)`
+Formats commission numbers as "XX XXX XXX"
+- Triggers when user types 8 digits
+- Inserts spaces: "12 345 678"
 
 ## Data Model
 
@@ -236,29 +715,34 @@ Personalplaner/
    - Main yearly planning grid
    - Employees in rows, dates in columns
    - Stores project assignments and absences
+   - ListObjects contain employee data and calendar
 
-2. **KW{number} {year}** (Weekly sheets)
-   - Created from Tabelle7 template
+2. **KW{number} {year}** (created from Tabelle7)
    - 5-day work week view (Mon-Fri)
    - Extracted data for specific calendar week
+   - Long form absence codes instead of short codes
 
 3. **Projektnummern** (wsProjekte)
    - Project master list
    - Columns: Project Name, Commission Number, Remarks
+   - Used by ProjectService
 
-4. **Feiertage** (Holidays table in Tabelle1)
-   - Holiday Name, Date
+4. **Feiertage** (in Tabelle1)
+   - ListObject "Feiertage"
+   - Columns: Holiday Name, Date
 
-5. **Ferien** (School vacations table in Tabelle1)
-   - Vacation Name, Start Date, End Date
+5. **Ferien** (in Tabelle1)
+   - ListObject "Ferien"
+   - Columns: Vacation Name, Start Date, End Date
 
 6. **Auswertung Mitarbeiter** (Tabelle8)
    - Employee workload analysis and statistics
+   - Uses formulas with WorkloadCalculations UDFs
 
 ### Named Ranges
 
-- `TAGE`: Range of date headers in calendar
-- `RibbonID`: Pointer to IRibbonUI object for ribbon refresh
+- **TAGE**: Range of date cells in calendar (row 10)
+- **RibbonID**: Pointer to IRibbonUI object (used by RefreshRibbon)
 
 ## Coding Conventions
 
@@ -266,29 +750,57 @@ Personalplaner/
 
 **Variables**:
 - Hungarian notation for objects: `ws` (Worksheet), `lo` (ListObject), `rng` (Range), `dict` (Dictionary)
-- camelCase for local variables: `lastRow`, `dateCol`, `tempWert`
-- PascalCase for parameters: `ByVal Datum As Date`
-
-**Constants**:
-- ALL_CAPS rare; usually PascalCase: `anzahlZeilen`
+- camelCase for local variables: `lastRow`, `dateColumn`, `employeeName`
+- PascalCase for parameters: `ByVal targetDate As Date`
 
 **Functions/Subs**:
-- PascalCase: `ErstelleKalenderMitArbeitstagen`, `FindeDatumsspalte`
-- German descriptive names
+- PascalCase: `CreateWorkDayCalendar`, `FindDateColumn`
+- English names (changed from German in refactoring)
+
+**Constants**:
+- ALL_CAPS or PascalCase: `EMPLOYEE_ROWS_COUNT`, `WeeklyInterval`
+
+### Rubberduck Annotations
+
+All modules use Rubberduck annotations:
+
+```vba
+'@Folder("Services.Calendar")
+'@ModuleDescription("Creates and manages calendar sheets")
+
+'@Description("Creates calendar with work days only")
+'@Param startCell The cell where calendar starts
+'@Param endDate The last date to include
+'@Returns True if successful
+Public Function CreateCalendar(...) As Boolean
+    '@Ignore EmptyStringLiteral
+    '@Todo Implement year wrapping
+End Function
+```
+
+**Available Annotations**:
+- `@Folder("path")`: Organizes modules in Rubberduck
+- `@ModuleDescription("text")`: Module purpose
+- `@Description("text")`: Function/sub purpose
+- `@Param name Description`: Parameter documentation
+- `@Returns Description`: Return value documentation
+- `@Ignore RuleId`: Suppress Rubberduck inspection
+- `@Todo text`: Mark incomplete implementations
 
 ### Error Handling Pattern
 
+**For Functions**:
 ```vba
 Public Function Example() As Variant
     On Error GoTo ErrHandler
 
-    ' ... code ...
+    '... code ...
 
     Example = result
     Exit Function
 
 ErrHandler:
-    Example = CVErr(xlErrValue)  ' Or appropriate error
+    Example = CVErr(xlErrValue)
 End Function
 ```
 
@@ -297,21 +809,20 @@ End Function
 Public Sub Example()
     On Error GoTo ErrorHandler
 
-    ' Store original settings
+    '--- Store original settings
     Dim originalScreenUpdating As Boolean
     originalScreenUpdating = Application.ScreenUpdating
 
     Application.ScreenUpdating = False
 
-    ' ... code ...
+    '... code ...
 
 CleanupAndExit:
     Application.ScreenUpdating = originalScreenUpdating
     Exit Sub
 
 ErrorHandler:
-    Application.ScreenUpdating = originalScreenUpdating
-    MsgBox "Fehler " & Err.Number & ": " & Err.Description
+    MsgBox "Fehler: " & Err.Description, vbCritical
     Resume CleanupAndExit
 End Sub
 ```
@@ -325,97 +836,164 @@ Application.Calculation = xlCalculationManual
 Application.EnableEvents = False
 Application.DisplayAlerts = False
 
-' ... operations ...
+'... operations ...
 
-' Restore settings
+'--- Restore settings
 Application.ScreenUpdating = True
-Application.Calculation = xlCalculationAutomatic ' Or keep Manual
+Application.Calculation = xlCalculationManual  '--- Keep manual!
 Application.EnableEvents = True
 Application.DisplayAlerts = True
 ```
 
 **Array Processing**:
 ```vba
-' Read entire range into array
-Dim arr As Variant
-arr = range.Value
+'--- Read entire range into array (FAST)
+Dim dataArray As Variant
+dataArray = listObj.DataBodyRange.Value
 
-' Process array (fast)
-For i = 1 To UBound(arr, 1)
-    For j = 1 To UBound(arr, 2)
-        ' Process arr(i, j)
-    Next j
-Next i
+'--- Process array in memory
+For rowIndex = 1 To UBound(dataArray, 1)
+    For colIndex = 1 To UBound(dataArray, 2)
+        '--- Process dataArray(rowIndex, colIndex)
+    Next colIndex
+Next rowIndex
+```
+
+**Dictionary Caching**:
+```vba
+'--- O(1) uniqueness checks
+Dim uniqueValues As Dictionary
+Set uniqueValues = New Dictionary
+uniqueValues.CompareMode = vbTextCompare  '--- Case-insensitive
+
+For Each value In sourceRange
+    If Not uniqueValues.Exists(value) Then
+        uniqueValues.Add value, True
+    End If
+Next value
 ```
 
 ### Multi-line Cell Handling
 
-Employee data often uses Alt+Enter (`vbNewLine` / `Chr(10)`) for multi-line cells:
+Employee data uses Alt+Enter (`vbNewLine` / `Chr(10)`) for multi-line cells:
 
 ```vba
-' Extract first line
-Dim fullText As String
-fullText = cell.Value
-Dim firstLine As String
-If InStr(fullText, Chr(10)) > 0 Then
-    firstLine = Split(fullText, Chr(10))(0)
-Else
-    firstLine = fullText
-End If
+'--- Parsing multi-line cell
+Dim lines() As String
+lines = Split(cellValue, vbNewLine)
+If UBound(lines) >= 0 Then displayName = lines(0)
+If UBound(lines) >= 1 Then phoneNumber = lines(1)
+If UBound(lines) >= 2 Then emailAddress = lines(2)
+
+'--- Creating multi-line cell
+cellValue = displayName & vbNewLine & phoneNumber & vbNewLine & emailAddress
 ```
 
 ### CodeName vs. Name
 
 **Always use CodeNames for reliability**:
 ```vba
-Set ws = Tabelle3  ' CodeName - won't break if user renames sheet
-' NOT: Set ws = Worksheets("Personalplaner")  ' User can rename
+Set ws = Tabelle3  '--- CodeName (safe, won't break if user renames)
+' NOT: Set ws = Worksheets("Personalplaner")  '--- User can rename!
 ```
 
 **CodeNames in this project**:
-- `Tabelle3` = "Personalplaner"
-- `Tabelle7` = KW template
-- `Tabelle8` = "Auswertung Mitarbeiter"
-- `Tabelle1` = Settings/reference data
-- `shWRTemplate` = Weekly report template
-- `wsProjekte` = Project list
-- `Diagramm1` = Charts sheet
+| CodeName | Default Sheet Name |
+|----------|-------------------|
+| `Tabelle3` | "Personalplaner" |
+| `Tabelle7` | KW template (hidden) |
+| `Tabelle8` | "Auswertung Mitarbeiter" |
+| `Tabelle1` | Settings/reference data |
+| `shWRTemplate` | Weekly report template |
+| `wsProjekte` | "Projektnummern" |
+| `Diagramm1` | Charts sheet |
 
 ## Key Workflows
 
-### Creating a New Calendar Week
+### Creating a New Calendar
 
-1. User clicks a KW cell in Personalplaner sheet
-2. `NeuesKWBlattErstellen()` is triggered
-3. System checks if sheet "KW{n} {year}" already exists
-4. If not, copies `Tabelle7` template
-5. Populates with employee data for that week
-6. Applies conditional formatting
-7. Initializes filter ListBoxes
+1. User clicks **"Kalender"** ribbon button (or calls `Tabelle3.CreateYearlyCalendar`)
+2. `RibbonController.CreateNewCalendar()` executes
+3. Navigates to Personalplaner sheet
+4. `CalendarService.CreateWorkDayCalendar()` is called
+5. System prompts for start/end date (e.g., 01.01.2025 - 31.12.2025)
+6. Clears existing calendar (deletes "TAGE" named range, clears area)
+7. Creates columns for each weekday (Mon-Fri only)
+8. Formats cells:
+   - **Row 10**: Weekday names (MO, DI, MI, DO, FR) as TEXT
+   - **Row 8**: KW numbers (merged across 5 columns)
+   - **Row 9**: Month names (merged across variable columns)
+9. Adds borders:
+   - Dotted borders between individual days
+   - Solid borders between weeks
+10. Sets column width to 2.0
+11. Extends all ListObjects to include calendar columns
+12. Creates "TAGE" named range
+13. Optionally adds holidays and vacations
+14. Applies conditional formatting (color-coded absence codes)
+15. Adds data validation dropdowns (absence codes)
+16. Stays on Personalplaner sheet
+
+### Creating a Weekly Sheet
+
+**Method 1: Double-click** (original functionality + extended)
+1. User double-clicks on KW header (row 8 merged cell) OR
+2. User double-clicks on any ListObject data cell
+3. `Tabelle3.Worksheet_BeforeDoubleClick` event fires
+4. System finds KW header for that column
+5. `WeeklySheetService.CreateWeeklySheet` is called
+
+**Method 2: Ribbon button** (NEW! More reliable)
+1. User clicks **"Akt. Woche"** ribbon button
+2. `RibbonController.OpenCurrentWeeklyPlan()` executes
+3. System finds today's date in calendar
+4. System locates KW header for today's column
+5. `WeeklySheetService.CreateWeeklySheet` is called
+
+**Creation Process**:
+1. Parses KW number and dates from header cell
+2. Checks if sheet "KW{n} {year}" already exists
+   - If yes: Activates existing sheet and exits
+   - If no: Continues with creation
+3. Copies Tabelle7 template
+4. Names sheet as "KW{number} {year}" (e.g., "KW15 2025")
+5. Populates header (KW, dates, timestamp)
+6. Copies employee data for that week (5 columns)
+7. Replaces short absence codes with long form text
+8. Applies conditional formatting (useShortForm=False)
+9. Initializes filter ListBoxes (Funktion, Team)
+10. Refreshes Ribbon to show TabWeeklyPlan
+11. Activates new sheet
 
 ### Generating Weekly Reports
 
 1. User navigates to a KW sheet
-2. Clicks "WR_ERSTELLEN" ribbon button
-3. `WR_Erstellen()` executes:
+2. User clicks **"WR erstellen"** ribbon button
+3. `WeeklyReportService.CreateWeeklyReports()` executes:
    - Collects unique projects from columns E:I
-   - Prompts for commission numbers for new projects
+   - Prompts for commission numbers for new projects (uses ProjectService)
    - Collects unique employees from column A
    - Creates new workbook `Wochenrapporte_{KW}.xlsm`
    - For each employee:
      - Copies `shWRTemplate`
      - Populates header (name, dates, KW)
      - Transfers daily project hours
-     - Maps absences to special rows (26=Ferien, 27=Militär, 28=Unfall, 29=Krank)
+     - Maps absences to special rows:
+       - Row 26 = Ferien
+       - Row 27 = Militär
+       - Row 28 = Unfall
+       - Row 29 = Krank
 
 ### Sending Report Reminders
 
-1. User clicks "WR_ANFORDERUNG" ribbon button
-2. `WR_Anfordern()` executes:
+1. User navigates to a KW sheet
+2. User clicks **"WR einfordern"** ribbon button
+3. `WeeklyReportService.SendWeeklyReportReminder()` executes:
    - Reads KW from active sheet
    - Collects employees from column A
-   - Extracts email from 3rd line of name cells
-   - Creates Outlook email with all recipients
+   - Extracts email from 3rd line of name cells (splits by vbNewLine)
+   - Creates Outlook email with all recipients in TO field
+   - **Uses HTMLBody with UTF-8** to properly display German umlauts
    - Displays email for review (user must manually send)
 
 ## Development Guidelines for AI Assistants
@@ -425,7 +1003,7 @@ Set ws = Tabelle3  ' CodeName - won't break if user renames sheet
 1. **Preserve Performance Optimizations**
    - Always maintain `ScreenUpdating = False` patterns
    - Keep array processing where used
-   - Don't change `Calculation = xlCalculationManual` without discussion
+   - Keep `Calculation = xlCalculationManual` (never change to Automatic)
 
 2. **Error Handling**
    - Maintain existing error patterns
@@ -433,7 +1011,7 @@ Set ws = Tabelle3  ' CodeName - won't break if user renames sheet
    - Use `CleanupAndExit` pattern for resource cleanup
 
 3. **Naming Conventions**
-   - Continue using German function names (user expectation)
+   - Use English function names (post-refactoring standard)
    - Keep Hungarian notation for object variables
    - Maintain `@Folder` annotations in module headers
 
@@ -448,7 +1026,7 @@ Set ws = Tabelle3  ' CodeName - won't break if user renames sheet
 
 6. **Date Handling**
    - Always use `Int(CDbl(date))` to strip time portion for comparisons
-   - Support both `Date` values and text dates (dd.mm.yyyy)
+   - Support both `Date` values and text dates
    - Use `WorksheetFunction.WeekNum(..., 2)` for ISO week numbers
    - Remember Monday = 1 in `Weekday(..., vbMonday)`
 
@@ -462,6 +1040,16 @@ Set ws = Tabelle3  ' CodeName - won't break if user renames sheet
    - Set `.CompareMode = vbTextCompare` for case-insensitive keys
    - Use for uniqueness checks and lookups
    - Return sorted dictionaries from collector functions
+
+9. **Character Encoding**
+   - Only use ASCII characters in code comments
+   - Replace: ä→ae, ö→oe, ü→ue in error messages
+   - For emails: Use HTMLBody with UTF-8 charset, NOT .Body
+
+10. **Text Formatting**
+    - When displaying weekday names (Mo-Fr), format cells as TEXT first
+    - Use `NumberFormat = "@"` before setting value
+    - Prevents Excel from interpreting as dates
 
 ### Testing Considerations
 
@@ -481,7 +1069,15 @@ Set ws = Tabelle3  ' CodeName - won't break if user renames sheet
 4. **Calendar Assumptions**
    - Only weekdays (Mon-Fri) in calendars
    - Saturdays and Sundays are skipped
-   - Row 10 always contains date headers
+   - Row 8: KW headers (merged)
+   - Row 9: Month headers (merged)
+   - Row 10: Date/weekday names (TEXT format)
+
+5. **Ribbon Callbacks**
+   - EXACT signatures required (parameter names matter!)
+   - `ribbon As IRibbonUI` (not `ByVal`)
+   - `control As IRibbonControl` (not `ByVal`)
+   - `ByRef returnedVal` (not `returnVisible`)
 
 ### Common Pitfalls
 
@@ -489,7 +1085,9 @@ Set ws = Tabelle3  ' CodeName - won't break if user renames sheet
 2. **Don't change column structure** without updating all dependent code
 3. **Don't remove `Application.Volatile` from UDFs** without testing
 4. **Don't use `ActiveSheet`** where specific sheet is needed - use CodeNames
-5. **Don't forget to unlock UI** (`Application.ScreenUpdating = True`) on error
+5. **Don't forget to unlock UI** (`ScreenUpdating = True`) on error
+6. **Don't use `.Body`** for emails - use `.HTMLBody` with UTF-8
+7. **Don't format weekday names without setting NumberFormat="@" first**
 
 ### Adding New Features
 
@@ -499,37 +1097,33 @@ Set ws = Tabelle3  ' CodeName - won't break if user renames sheet
 3. Maintain the `@Folder` annotation style
 4. Add descriptive `@Description` comments for public functions
 5. Follow existing error handling patterns
-6. Consider performance impact on large datasets (50+ employees, 260+ workdays)
+6. Consider performance impact on large datasets (200+ employees, 260+ workdays)
 
 **After implementing**:
 1. Test with actual data (not just sample)
 2. Verify it works with hidden rows/columns
 3. Check it doesn't break when sheets are renamed
 4. Ensure it handles empty cells and errors gracefully
+5. Update CLAUDE.md and REFACTORING.md
 
-## Git Workflow
+## Known Issues & Fixes
 
-This project uses VBA file extraction for version control:
-- Each module is a separate `.bas` file
-- Each UserForm is `.frm` (code) + `.frx` (binary)
-- Each worksheet class is a `.doccls` file
+### Fixed Issues (as of 2025-11-19)
 
-**To export VBA**:
-Use a VBA export tool or script to extract modules from the `.xlsm` file
+✅ **Conditional Formatting nicht angezeigt** - Fixed in CalendarService
+✅ **Dropdown-Menü mit Absencecodes fehlt** - Added ApplyDataValidationToTables
+✅ **Datumszellen als Datum interpretiert** - Now formatted as TEXT first
+✅ **ListObject geht nicht bis Ende** - Simplified extension logic
+✅ **Diagramm öffnet sich** - Changed Tabelle1.Activate to Tabelle3.Activate
+✅ **Schulferien falsch gemerged** - Now unmerges before merging
+✅ **Email-Kodierung falsch** - Uses HTMLBody with UTF-8 instead of Body
+✅ **Projektnummern nicht gefunden** - Uses ProjectService.GetProjectSheet
+✅ **UF_Projekte lädt nicht** - Added UserForm_Initialize
+✅ **Doppelklick unzuverlässig** - Added Ribbon buttons as alternative
 
-**To import VBA**:
-Import all modules back into a blank Excel workbook
+### Active TODOs
 
-## Dependencies
-
-**Required References**:
-- Microsoft Scripting Runtime (Scripting.Dictionary)
-- Microsoft Outlook Object Library (for email automation)
-- Microsoft Forms 2.0 Object Library (for UserForms)
-
-**Excel Version**:
-- Requires Excel 2010 or later (VBA7 with 64-bit support)
-- Custom Ribbon requires Excel 2007+
+See REFACTORING.md for complete list of TODOs
 
 ## Performance Characteristics
 
@@ -549,11 +1143,11 @@ Import all modules back into a blank Excel workbook
 
 **Language**: Swiss German (de-CH)
 - Uses Swiss date format: dd.mm.yyyy
-- Weekday names in German: Montag, Dienstag, etc.
+- Weekday names: Mo, Di, Mi, Do, Fr (German abbreviations)
 - Month names in German: Januar, Februar, etc.
 - UI text and messages in German
 
-**Encoding**: UTF-8 (supports umlauts: ä, ö, ü)
+**Encoding**: UTF-8 for emails, ASCII for VBA comments
 
 ## Security Considerations
 
@@ -562,61 +1156,51 @@ Import all modules back into a blank Excel workbook
 3. **Outlook automation** requires user permission on first run
 4. **File paths** are relative to workbook location
 
-## Maintenance Notes
-
-**Regular tasks**:
-- Update "Feiertage" table annually with new holidays
-- Update "Ferien" table with school vacation periods
-- Review and clean old KW sheets periodically
-- Backup project list ("Projektnummern") before major changes
-
-**Known limitations**:
-- Manual calculation mode requires explicit refresh
-- Ribbon refresh requires Excel restart after major changes
-- Multi-line cells can be accidentally broken by careless editing
-
----
-
 ## Quick Reference
 
 ### Finding Code
 
-**Calendar operations**: `mKalender.bas`
-**Date lookups**: `mBerechnung.bas`, `mAuslastung.bas`
-**Weekly sheets**: `mKWBlatt.bas`
-**Report generation**: `Modul5.bas`
-**Filtering**: `mFilter.bas`, `UF_Filter.frm`
-**Project selection**: `UF_Projekte.frm`
-**Data collection**: `mWertesammler.bas`
-**Formatting**: `mFormatierung.bas`
-**Ribbon UI**: `CustomUI.bas`
-**Workbook events**: `DieseArbeitsmappe.doccls`
+| What | Where |
+|------|-------|
+| Calendar operations | CalendarService.bas |
+| Date lookups | DateHelpers.bas |
+| Weekly sheets | WeeklySheetService.bas |
+| Report generation | WeeklyReportService.bas |
+| Email sending | EmailService.bas, WeeklyReportService.bas |
+| Filtering | FilterService.bas |
+| Project management | ProjectService.bas |
+| Employee data collection | EmployeeService.bas |
+| Workload UDFs | WorkloadCalculations.bas |
+| Ribbon UI | RibbonController.bas |
+| Workbook events | DieseArbeitsmappe.doccls |
 
 ### Key Sheet CodeNames
 
-- `Tabelle3` - Main Personalplaner
-- `Tabelle7` - KW template
-- `Tabelle8` - Employee analysis
-- `Tabelle1` - Settings/reference data
-- `shWRTemplate` - Weekly report template
-- `wsProjekte` - Project list
-- `Diagramm1` - Charts
+| CodeName | Sheet Name |
+|----------|------------|
+| Tabelle3 | Personalplaner |
+| Tabelle7 | KW template (hidden) |
+| Tabelle8 | Auswertung Mitarbeiter |
+| Tabelle1 | Settings/reference data |
+| shWRTemplate | Weekly report template |
+| wsProjekte | Projektnummern |
+| Diagramm1 | Charts |
 
 ### Absence Code Reference
 
-| Code | German | English |
-|------|--------|---------|
-| F | Ferien | Vacation |
-| Fx | Ferien nicht bewilligt | Vacation not approved |
-| U | Unfall | Accident |
-| K | Krank | Sick |
-| WK | Militär | Military service |
-| S | Schule | School |
-| ÜK | Überbetr. Kurs | Inter-company course |
-| T | Teilzeit | Part-time |
+| Code | German | English | Color |
+|------|--------|---------|-------|
+| F | Ferien | Vacation | Light Blue |
+| Fx | Ferien nicht bewilligt | Vacation not approved | Orange |
+| K | Krank | Sick | Yellow |
+| U | Unfall | Accident | Red |
+| WK | Militär | Military service | Green |
+| S | Schule | School | Light Green |
+| ÜK | Überbetr. Kurs | Inter-company course | Beige |
+| T | Teilzeit | Part-time | Gray |
 
 ---
 
+**Version**: 2.0 (Refactored)
 **Last Updated**: 2025-11-19
-**Version**: 1.0
 **Maintained for**: AI Assistant Integration
