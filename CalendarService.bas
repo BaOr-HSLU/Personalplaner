@@ -298,14 +298,10 @@ Private Sub FinalizeCalendarWeek(ByVal targetSheet As Worksheet, _
     Dim firstDayDate As Date
     Dim lastDayDate As Date
 
-    '--- Get actual dates from a hidden row or calculate from week
-    '--- Since we now display weekday names (MO/DI/etc), we need to store the actual date elsewhere
-    '--- We'll use the row below the weekday names for the numeric date range display
-    firstDayDate = DateSerial(Year(Date), 1, 1) + (weekNumber - 1) * 7
-    Do While Weekday(firstDayDate, vbMonday) > 1
-        firstDayDate = firstDayDate + 1
-    Loop
-    lastDayDate = firstDayDate + 4  ' Monday to Friday
+    '--- Get actual dates from the cells in this week
+    '--- Since cells now contain real date values (with "TTT" format), we can read them directly
+    firstDayDate = targetSheet.Cells(dataRow, startColumn).Value
+    lastDayDate = targetSheet.Cells(dataRow, endColumn).Value
 
     With targetSheet.Range(targetSheet.Cells(dataRow + DATE_ROW_OFFSET, startColumn), _
                            targetSheet.Cells(dataRow + DATE_ROW_OFFSET, endColumn))

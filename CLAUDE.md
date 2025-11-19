@@ -25,12 +25,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Critical Rules:**
 1. Always use CodeNames (Tabelle3, not "Personalplaner")
-2. Format weekday cells as TEXT first (`NumberFormat = "@"`)
+2. Calendar date cells contain actual Date values with `NumberFormat = "TTT"` format
 3. Use `.HTMLBody` with UTF-8 for emails (not `.Body`)
 4. Keep `Application.Calculation = xlCalculationManual` (never automatic)
 5. Multi-line cells use `vbNewLine` (Chr(10)) - format: Name\nPhone\nEmail
 6. Only ASCII characters in VBA code (no ä, ö, ü, emojis)
-7. Calendar structure: Row 8=KW, Row 9=Month, Row 10=Weekdays (MO-FR)
+7. Calendar structure: Row 8=KW, Row 9=Month, Row 10=Weekdays with date values
 
 **Testing:** All changes pushed to branch `claude/claude-md-mi5rpfamsyrm1wyu-01Wj9LJQ5P84ehTKbnzcyXLx`
 
@@ -199,7 +199,7 @@ Creates a calendar with work days only (Monday-Friday)
 - Prompts user for start/end date
 - Clears existing calendar elements
 - Creates columns for each weekday
-- Formats cells with weekday names (MO, DI, MI, DO, FR) as TEXT
+- Stores actual date values in cells with "TTT" format (displays Mo, Di, Mi, Do, Fr)
 - Merges cells for KW, month, year headers
 - Adds dotted borders between days, solid borders between weeks
 - Extends all ListObjects to include calendar columns
@@ -207,7 +207,7 @@ Creates a calendar with work days only (Monday-Friday)
 - Applies conditional formatting and data validation dropdowns
 - Optionally adds holidays and vacations
 
-**IMPORTANT**: Date cells are formatted as TEXT (`NumberFormat = "@"`) to prevent Excel from interpreting "Di" as February date.
+**IMPORTANT**: Date cells contain actual Date values formatted as "TTT" to display weekday abbreviations (Mo, Di, Mi, Do, Fr).
 
 #### `AddHolidaysAndVacations()`
 Adds holidays and school vacations to the calendar
@@ -643,7 +643,7 @@ Opens or creates the weekly plan for current calendar week
 **Structure**:
 - Row 8: KW headers (merged across 5 columns)
 - Row 9: Month headers (merged across variable columns)
-- Row 10: Date/weekday names (MO, DI, MI, DO, FR)
+- Row 10: Date values formatted as "TTT" (Mo, Di, Mi, Do, Fr)
 - Columns A-N: Employee data (Number, Name, Function, Team, etc.)
 - Columns O+: Daily assignments (one column per weekday)
 
@@ -953,7 +953,7 @@ Set ws = Tabelle3  '--- CodeName (safe, won't break if user renames)
 6. Clears existing calendar (deletes "TAGE" named range, clears area)
 7. Creates columns for each weekday (Mon-Fri only)
 8. Formats cells:
-   - **Row 10**: Weekday names (MO, DI, MI, DO, FR) as TEXT
+   - **Row 10**: Date values with "TTT" format (displays Mo, Di, Mi, Do, Fr)
    - **Row 8**: KW numbers (merged across 5 columns)
    - **Row 9**: Month names (merged across variable columns)
 9. Adds borders:
@@ -1079,10 +1079,10 @@ Set ws = Tabelle3  '--- CodeName (safe, won't break if user renames)
    - Replace: ä→ae, ö→oe, ü→ue in error messages
    - For emails: Use HTMLBody with UTF-8 charset, NOT .Body
 
-10. **Text Formatting**
-    - When displaying weekday names (Mo-Fr), format cells as TEXT first
-    - Use `NumberFormat = "@"` before setting value
-    - Prevents Excel from interpreting as dates
+10. **Date Formatting in Calendar**
+    - Calendar date cells store actual Date values with `NumberFormat = "TTT"`
+    - Displays weekday abbreviations (Mo, Di, Mi, Do, Fr) but preserves date calculations
+    - Enables proper date-based formulas and lookups
 
 ### Testing Considerations
 
@@ -1104,7 +1104,7 @@ Set ws = Tabelle3  '--- CodeName (safe, won't break if user renames)
    - Saturdays and Sundays are skipped
    - Row 8: KW headers (merged)
    - Row 9: Month headers (merged)
-   - Row 10: Date/weekday names (TEXT format)
+   - Row 10: Date values with "TTT" format (shows Mo, Di, Mi, Do, Fr)
 
 5. **Ribbon Callbacks**
    - EXACT signatures required (parameter names matter!)
@@ -1120,7 +1120,7 @@ Set ws = Tabelle3  '--- CodeName (safe, won't break if user renames)
 4. **Don't use `ActiveSheet`** where specific sheet is needed - use CodeNames
 5. **Don't forget to unlock UI** (`ScreenUpdating = True`) on error
 6. **Don't use `.Body`** for emails - use `.HTMLBody` with UTF-8
-7. **Don't format weekday names without setting NumberFormat="@" first**
+7. **Don't store text in calendar date cells - use actual Date values with "TTT" format**
 
 ### Adding New Features
 
