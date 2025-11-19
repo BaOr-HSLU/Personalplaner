@@ -151,6 +151,15 @@ Public Sub OnRibbonButtonClick(ByVal control As IRibbonControl)
             'NOTE: CUSTOMUI XML: control id="BtnCreateWeeklyReports"
             WeeklyReportService.CreateWeeklyReports
 
+        '--- Calendar & Weekly Plan Buttons ---
+        Case "BtnCreateCalendar"
+            'NOTE: CUSTOMUI XML: control id="BtnCreateCalendar"
+            Call CreateNewCalendar
+
+        Case "BtnOpenCurrentWeek"
+            'NOTE: CUSTOMUI XML: control id="BtnOpenCurrentWeek"
+            Call OpenCurrentWeeklyPlan
+
         Case Else
             MsgBox "Unbekannter Button: " & control.id, vbExclamation
     End Select
@@ -218,4 +227,66 @@ Private Sub ShowProjectInput()
     wsProjekte.Visible = xlSheetVisible
     wsProjekte.Activate
     UF_ProjektErstellen.Show 0
+End Sub
+
+'@Description("Creates a new calendar in the main Personalplaner sheet")
+Private Sub CreateNewCalendar()
+    On Error GoTo ErrorHandler
+
+    '--- Navigate to Personalplaner sheet
+    Call NavigateToOverview
+
+    '--- Call the calendar creation function from Tabelle3
+    Tabelle3.CreateYearlyCalendar
+
+    MsgBox "Kalender wurde erfolgreich erstellt!", vbInformation, "Kalender erstellen"
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "Fehler beim Erstellen des Kalenders:" & vbNewLine & vbNewLine & _
+           "Fehler: " & Err.Description, _
+           vbCritical, "Kalender-Fehler"
+End Sub
+
+'@Description("Opens or creates the weekly plan for the current calendar week")
+Private Sub OpenCurrentWeeklyPlan()
+    On Error GoTo ErrorHandler
+
+    '--- Navigate to Personalplaner sheet
+    Call NavigateToOverview
+
+    '--- Find today's date in the calendar
+    Dim todayColumn As Long
+    todayColumn = DateHelpers.FindDateColumn(Tabelle3, 10, Date, 15)
+
+    If todayColumn = 0 Then
+        MsgBox "Heutiges Datum nicht im Kalender gefunden. Bitte erstellen Sie zuerst einen Kalender.", _
+               vbExclamation, "Datum nicht gefunden"
+        Exit Sub
+    End If
+
+    '--- Find the KW header cell for today's column (row 8 contains KW headers)
+    Dim kwHeaderCell As Range
+    Set kwHeaderCell = Tabelle3.Cells(8, todayColumn)
+
+    '--- If this cell is part of a merged area, get the merged area's first cell
+    If kwHeaderCell.MergeCells Then
+        Set kwHeaderCell = kwHeaderCell.MergeArea.Cells(1, 1)
+    End If
+
+    '--- Verify we have a valid KW header
+    If Not kwHeaderCell.MergeCells Or IsEmpty(kwHeaderCell.Value) Then
+        MsgBox "Kalenderwoche konnte nicht ermittelt werden.", vbExclamation, "KW nicht gefunden"
+        Exit Sub
+    End If
+
+    '--- Create or open the weekly sheet
+    WeeklySheetService.CreateWeeklySheet kwHeaderCell
+
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "Fehler beim Oeffnen der Wochenliste:" & vbNewLine & vbNewLine & _
+           "Fehler: " & Err.Description, _
+           vbCritical, "Wochenliste-Fehler"
 End Sub

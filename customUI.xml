@@ -74,6 +74,19 @@
                         supertip="Kommissionsnummer, Projektbezeichnung und Kunde für Wochenrapport eintragen"
                         onAction="OnRibbonButtonClick"
                         image="ADD" />
+                    <separator id="Separator2"/>
+                    <button id="BtnCreateCalendar" label="Kalender"
+                        screentip="Neuen Kalender erstellen"
+                        supertip="Erstellt einen neuen Jahreskalender im Personalplaner mit allen Arbeitstagen, Feiertagen und Ferien."
+                        size="large"
+                        onAction="OnRibbonButtonClick"
+                        image="TIMELINE-MONTH" />
+                    <button id="BtnOpenCurrentWeek" label="Akt. Woche"
+                        screentip="Aktuelle Woche öffnen"
+                        supertip="Öffnet oder erstellt die Wochenliste für die aktuelle Kalenderwoche."
+                        size="large"
+                        onAction="OnRibbonButtonClick"
+                        image="TIMELINE-WEEK" />
                 </group>
 
                 <!-- Wochenplan-Gruppe -->
