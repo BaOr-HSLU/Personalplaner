@@ -175,7 +175,7 @@ End Function
 
 '@Description("Gets the project master worksheet, makes it visible if needed")
 '@Returns Worksheet object or Nothing if not found
-Private Function GetProjectSheet() As Worksheet
+Public Function GetProjectSheet() As Worksheet
     '@Ignore EmptyStringLiteral
     On Error Resume Next
 
@@ -240,3 +240,4 @@ Public Function LoadAllProjects() As Dictionary
 
     Set LoadAllProjects = projectDict
 End Function
+
