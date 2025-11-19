@@ -85,6 +85,10 @@ Public Sub CreateWeeklySheet(ByVal selectedCell As Range)
     Application.DisplayAlerts = True
     Application.Calculate
     Application.StatusBar = "DONE!"
+
+    'FIX: Refresh ribbon to update tab visibility (TabWeeklyPlan should now be visible)
+    RibbonController.RefreshRibbon
+
     Application.ScreenUpdating = True
     Application.StatusBar = False
 End Sub

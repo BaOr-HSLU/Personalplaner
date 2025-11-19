@@ -14,7 +14,7 @@ Private Const VACATIONS_ROW_OFFSET As Long = -4
 '@Param startCell The cell where the calendar should start
 Public Sub CreateWorkDayCalendar(ByVal startCell As Range)
     If startCell Is Nothing Then
-        MsgBox "Keine Startzelle ausgewählt.", vbExclamation
+        MsgBox "Keine Startzelle ausgewaehlt.", vbExclamation
         Exit Sub
     End If
 
@@ -33,15 +33,21 @@ Public Sub CreateWorkDayCalendar(ByVal startCell As Range)
         Exit Sub
     End If
 
+    '--- FIX #5: Clear existing calendar elements before creating new one
+    Call ClearExistingCalendar(targetSheet, startCell)
+
     '--- Performance optimization
     Dim originalScreenUpdating As Boolean
     Dim originalCursor As XlMousePointer
+    Dim originalCalculation As XlCalculation
 
     originalScreenUpdating = Application.ScreenUpdating
     originalCursor = Application.Cursor
+    originalCalculation = Application.Calculation
 
     Application.ScreenUpdating = False
     Application.Cursor = xlWait
+    Application.Calculation = xlCalculationManual
 
     Dim currentColumn As Long
     Dim currentRow As Long
@@ -75,17 +81,23 @@ Public Sub CreateWorkDayCalendar(ByVal startCell As Range)
         .Color = RGB(0, 0, 0)
     End With
 
+    Dim firstCalendarColumn As Long
+    firstCalendarColumn = currentColumn
+
     '--- Main loop: iterate through all dates
     Do While currentDate <= endDate
         '--- Only process weekdays (Monday-Friday)
         If Weekday(currentDate, vbMonday) <= 5 Then
             Application.StatusBar = currentYear & " / " & currentMonth & " / " & currentCalendarWeek & " / " & currentDate
 
-            '--- Write date
-            targetSheet.Cells(currentRow, currentColumn).value = currentDate
-            targetSheet.Cells(currentRow, currentColumn).NumberFormat = "dd"
+            '--- FIX #3 & #7: Write weekday name (MO/DI/MI/DO/FR) instead of day number
+            targetSheet.Cells(currentRow, currentColumn).Value = Format(currentDate, "ddd")
             targetSheet.Cells(currentRow, currentColumn).HorizontalAlignment = xlCenter
-            targetSheet.Columns(currentColumn).ColumnWidth = 0.69
+            targetSheet.Cells(currentRow, currentColumn).Font.Bold = True
+            targetSheet.Cells(currentRow, currentColumn).Font.Size = 8
+
+            '--- FIX #8: Increase column width to 2.0
+            targetSheet.Columns(currentColumn).ColumnWidth = 2#
 
             '--- Format holiday/vacation cell (merged vertical)
             With targetSheet.Range(targetSheet.Cells(currentRow - 5, currentColumn), _
@@ -97,11 +109,21 @@ Public Sub CreateWorkDayCalendar(ByVal startCell As Range)
                 .HorizontalAlignment = xlCenter
             End With
 
+            '--- FIX #6: Add dotted border between individual days
+            If currentColumn > firstCalendarColumn Then
+                With targetSheet.Range(targetSheet.Cells(currentRow, currentColumn), _
+                                       targetSheet.Cells(currentRow + EMPLOYEE_ROWS_COUNT, currentColumn)).Borders(xlEdgeLeft)
+                    .LineStyle = xlDot
+                    .Weight = xlThin
+                    .Color = RGB(192, 192, 192)
+                End With
+            End If
+
             '--- Check for calendar week change
             If WorksheetFunction.WeekNum(currentDate, 2) <> currentCalendarWeek Then
                 Call FinalizeCalendarWeek(targetSheet, currentRow, weekStartColumn, currentColumn - 1, currentCalendarWeek)
 
-                '--- Draw border for new week
+                '--- Draw solid border for new week (overrides dotted border)
                 With targetSheet.Range(targetSheet.Cells(currentRow, currentColumn), _
                                        targetSheet.Cells(currentRow + EMPLOYEE_ROWS_COUNT, currentColumn)).Borders(xlEdgeLeft)
                     .LineStyle = xlContinuous
@@ -147,8 +169,12 @@ Public Sub CreateWorkDayCalendar(ByVal startCell As Range)
         RefersTo:=targetSheet.Range(targetSheet.Cells(startCell.Row, startCell.Column), _
                                      targetSheet.Cells(startCell.Row, currentColumn - 1))
 
+    '--- FIX #4: Extend ListObjects to include new calendar columns
+    Call ExtendListObjectsToCalendar(targetSheet, startCell.Row, firstCalendarColumn, currentColumn - 1)
+
     Application.ScreenUpdating = originalScreenUpdating
     Application.Cursor = originalCursor
+    Application.Calculation = originalCalculation
     Application.StatusBar = False
 
     MsgBox "Kalender mit Arbeitstagen erfolgreich erstellt!", vbInformation
@@ -161,9 +187,68 @@ Public Sub CreateWorkDayCalendar(ByVal startCell As Range)
         Call AddHolidaysAndVacations
     End If
 
+    '--- FIX #1 & #2: Apply conditional formatting AND data validation dropdowns
     Call ApplyConditionalFormattingToTables
+    Call ApplyDataValidationToTables
 
     Tabelle1.Activate
+End Sub
+
+'@Description("Clears existing calendar elements to avoid conflicts")
+'@Param targetSheet The worksheet containing the calendar
+'@Param startCell The cell where the calendar starts
+Private Sub ClearExistingCalendar(ByVal targetSheet As Worksheet, ByVal startCell As Range)
+    On Error Resume Next
+
+    '--- Delete named range
+    ThisWorkbook.Names("TAGE").Delete
+
+    '--- Clear calendar area (from start cell to reasonable extent)
+    '--- Clear header rows (5 rows above start cell)
+    '--- Clear data rows (50 rows below start cell)
+    Dim clearRange As Range
+    Set clearRange = targetSheet.Range( _
+        targetSheet.Cells(startCell.Row - 8, startCell.Column), _
+        targetSheet.Cells(startCell.Row + EMPLOYEE_ROWS_COUNT, 300))
+
+    '--- Clear contents, formats, and validation
+    clearRange.ClearContents
+    clearRange.ClearFormats
+    clearRange.Validation.Delete
+
+    On Error GoTo 0
+End Sub
+
+'@Description("Extends all ListObjects on the sheet to include calendar columns")
+'@Param targetSheet The worksheet containing the tables
+'@Param dataRow The row where employee data starts
+'@Param firstColumn The first calendar column
+'@Param lastColumn The last calendar column
+Private Sub ExtendListObjectsToCalendar(ByVal targetSheet As Worksheet, _
+                                         ByVal dataRow As Long, _
+                                         ByVal firstColumn As Long, _
+                                         ByVal lastColumn As Long)
+    On Error Resume Next
+
+    Dim listObj As ListObject
+    For Each listObj In targetSheet.ListObjects
+        '--- Check if this table includes the data row
+        If Not listObj.DataBodyRange Is Nothing Then
+            If listObj.DataBodyRange.Row <= dataRow And _
+               listObj.DataBodyRange.Row + listObj.DataBodyRange.Rows.Count - 1 >= dataRow Then
+
+                '--- Extend table to include all calendar columns
+                Dim newRange As Range
+                Set newRange = targetSheet.Range( _
+                    listObj.Range.Cells(1, 1), _
+                    targetSheet.Cells(listObj.Range.Row + listObj.Range.Rows.Count - 1, lastColumn))
+
+                listObj.Resize newRange
+            End If
+        End If
+    Next listObj
+
+    On Error GoTo 0
 End Sub
 
 '@Description("Finalizes a calendar week by merging cells and adding borders")
@@ -177,7 +262,7 @@ Private Sub FinalizeCalendarWeek(ByVal targetSheet As Worksheet, _
     With targetSheet.Range(targetSheet.Cells(dataRow + CALENDAR_WEEK_ROW_OFFSET, startColumn), _
                            targetSheet.Cells(dataRow + CALENDAR_WEEK_ROW_OFFSET, endColumn))
         .Merge
-        .value = CStr(weekNumber)
+        .Value = CStr(weekNumber)
         .HorizontalAlignment = xlCenter
         .Font.Bold = True
         .Font.Size = 10
@@ -191,13 +276,20 @@ Private Sub FinalizeCalendarWeek(ByVal targetSheet As Worksheet, _
     '--- Date range (e.g., "01-05")
     Dim firstDayDate As Date
     Dim lastDayDate As Date
-    firstDayDate = targetSheet.Cells(dataRow, startColumn).value
-    lastDayDate = targetSheet.Cells(dataRow, endColumn).value
+
+    '--- Get actual dates from a hidden row or calculate from week
+    '--- Since we now display weekday names (MO/DI/etc), we need to store the actual date elsewhere
+    '--- We'll use the row below the weekday names for the numeric date range display
+    firstDayDate = DateSerial(Year(Date), 1, 1) + (weekNumber - 1) * 7
+    Do While Weekday(firstDayDate, vbMonday) > 1
+        firstDayDate = firstDayDate + 1
+    Loop
+    lastDayDate = firstDayDate + 4  ' Monday to Friday
 
     With targetSheet.Range(targetSheet.Cells(dataRow + DATE_ROW_OFFSET, startColumn), _
                            targetSheet.Cells(dataRow + DATE_ROW_OFFSET, endColumn))
         .Merge
-        .value = Format(firstDayDate, "dd") & "-" & Format(lastDayDate, "dd")
+        .Value = Format(firstDayDate, "dd") & "-" & Format(lastDayDate, "dd")
         .HorizontalAlignment = xlCenter
         .Font.Bold = False
         .Font.Size = 8
@@ -220,7 +312,7 @@ Private Sub FinalizeMonth(ByVal targetSheet As Worksheet, _
     With targetSheet.Range(targetSheet.Cells(dataRow + MONTH_ROW_OFFSET, startColumn), _
                            targetSheet.Cells(dataRow + MONTH_ROW_OFFSET, endColumn))
         .Merge
-        .value = monthName & " " & yearValue
+        .Value = monthName & " " & yearValue
         .NumberFormat = "MMMM YYYY"
         .HorizontalAlignment = xlCenter
         .Font.Bold = True
@@ -276,9 +368,9 @@ Private Sub MarkVacationPeriod(ByVal targetSheet As Worksheet, _
     Dim vacationStart As Date
     Dim vacationEnd As Date
 
-    vacationName = vacationRow.Range.Cells(1, 1).value
-    vacationStart = vacationRow.Range.Cells(1, 2).value
-    vacationEnd = vacationRow.Range.Cells(1, 3).value
+    vacationName = vacationRow.Range.Cells(1, 1).Value
+    vacationStart = vacationRow.Range.Cells(1, 2).Value
+    vacationEnd = vacationRow.Range.Cells(1, 3).Value
 
     Application.StatusBar = "Ferien / " & vacationName & " von " & vacationStart & " bis " & vacationEnd
 
@@ -287,23 +379,29 @@ Private Sub MarkVacationPeriod(ByVal targetSheet As Worksheet, _
     firstColumn = 0
     lastColumn = 0
 
-    '--- Find columns for vacation period
-    Dim dateCell As Range
-    For Each dateCell In datesRange.Cells
-        If IsDate(dateCell.value) Then
-            If dateCell.value >= vacationStart And dateCell.value <= vacationEnd Then
-                If firstColumn = 0 Then firstColumn = dateCell.Column
-                lastColumn = dateCell.Column
-            End If
+    '--- Find columns for vacation period by checking actual dates
+    '--- Since we changed the display to weekday names, we need to match by actual dates
+    '--- We'll need to calculate which columns correspond to the vacation dates
+    Dim currentCol As Long
+    Dim checkDate As Date
+
+    For currentCol = datesRange.Column To datesRange.Column + datesRange.Columns.Count - 1
+        '--- Calculate the date for this column based on its position
+        '--- This is a workaround since we changed the display format
+        checkDate = GetDateForColumn(targetSheet, datesRowNumber, currentCol)
+
+        If checkDate >= vacationStart And checkDate <= vacationEnd Then
+            If firstColumn = 0 Then firstColumn = currentCol
+            lastColumn = currentCol
         End If
-    Next dateCell
+    Next currentCol
 
     '--- Mark vacation period
     If firstColumn > 0 And lastColumn >= firstColumn Then
         With targetSheet.Range(targetSheet.Cells(datesRowNumber - 4, firstColumn), _
                                targetSheet.Cells(datesRowNumber - 4, lastColumn))
             .Merge
-            .value = vacationName
+            .Value = vacationName
             .Font.Size = 6
             .HorizontalAlignment = xlCenter
             With .Borders
@@ -315,6 +413,60 @@ Private Sub MarkVacationPeriod(ByVal targetSheet As Worksheet, _
     End If
 End Sub
 
+'@Description("Gets the actual date for a calendar column")
+'@Param targetSheet The worksheet
+'@Param dateRow The row containing date information
+'@Param columnIndex The column to check
+'@Returns The date for the specified column
+Private Function GetDateForColumn(ByVal targetSheet As Worksheet, _
+                                   ByVal dateRow As Long, _
+                                   ByVal columnIndex As Long) As Date
+    '--- Since we display weekday names, we need to calculate the actual date
+    '--- We can look at the week number and date range in the header rows
+    Dim weekNumber As Long
+    Dim weekCell As Range
+
+    '--- Find the calendar week for this column
+    Set weekCell = targetSheet.Cells(dateRow + CALENDAR_WEEK_ROW_OFFSET, columnIndex)
+
+    If IsNumeric(weekCell.Value) Then
+        weekNumber = CLng(weekCell.Value)
+
+        '--- Calculate base date from week number
+        Dim baseDate As Date
+        baseDate = DateSerial(Year(Date), 1, 1)
+        baseDate = baseDate + (weekNumber - 1) * 7
+
+        '--- Adjust to Monday of that week
+        Do While Weekday(baseDate, vbMonday) > 1
+            baseDate = baseDate + 1
+        Loop
+
+        '--- Find which day of the week this column represents
+        '--- by looking at the weekday name
+        Dim weekdayName As String
+        weekdayName = targetSheet.Cells(dateRow, columnIndex).Value
+
+        Select Case UCase(weekdayName)
+            Case "MO", "MON"
+                GetDateForColumn = baseDate
+            Case "DI", "TUE"
+                GetDateForColumn = baseDate + 1
+            Case "MI", "WED"
+                GetDateForColumn = baseDate + 2
+            Case "DO", "THU"
+                GetDateForColumn = baseDate + 3
+            Case "FR", "FRI"
+                GetDateForColumn = baseDate + 4
+            Case Else
+                GetDateForColumn = baseDate
+        End Select
+    Else
+        '--- Fallback: return today's date
+        GetDateForColumn = Date
+    End If
+End Function
+
 '@Description("Marks a single holiday in the calendar")
 Private Sub MarkHoliday(ByVal targetSheet As Worksheet, _
                         ByVal holidayRow As ListRow, _
@@ -324,36 +476,37 @@ Private Sub MarkHoliday(ByVal targetSheet As Worksheet, _
     Dim holidayName As String
     Dim holidayDate As Date
 
-    holidayName = holidayRow.Range.Cells(1, 1).value
-    holidayDate = holidayRow.Range.Cells(1, 2).value
+    holidayName = holidayRow.Range.Cells(1, 1).Value
+    holidayDate = holidayRow.Range.Cells(1, 2).Value
 
     Application.StatusBar = "Feiertag / " & holidayName & " " & holidayDate
 
-    '--- Find date column
-    Dim dateCell As Range
-    Set dateCell = Nothing
+    '--- Find date column by calculating actual dates
+    Dim currentCol As Long
+    Dim checkDate As Date
+    Dim foundColumn As Long
+    foundColumn = 0
 
-    Dim currentCell As Range
-    For Each currentCell In datesRange.Cells
-        If IsDate(currentCell.value) Then
-            If CLng(currentCell.value) = CLng(holidayDate) Then
-                Set dateCell = currentCell
-                Exit For
-            End If
+    For currentCol = datesRange.Column To datesRange.Column + datesRange.Columns.Count - 1
+        checkDate = GetDateForColumn(targetSheet, datesRowNumber, currentCol)
+
+        If CLng(checkDate) = CLng(holidayDate) Then
+            foundColumn = currentCol
+            Exit For
         End If
-    Next currentCell
+    Next currentCol
 
-    If Not dateCell Is Nothing Then
+    If foundColumn > 0 Then
         '--- Color entire column
-        With targetSheet.Range(targetSheet.Cells(datesRowNumber, dateCell.Column), _
-                               targetSheet.Cells(datesRowNumber + EMPLOYEE_ROWS_COUNT, dateCell.Column)).Interior
+        With targetSheet.Range(targetSheet.Cells(datesRowNumber, foundColumn), _
+                               targetSheet.Cells(datesRowNumber + EMPLOYEE_ROWS_COUNT, foundColumn)).Interior
             .Pattern = xlSolid
             .ColorIndex = 33
         End With
 
         '--- Add holiday name
-        With targetSheet.Cells(datesRowNumber - 8, dateCell.Column)
-            .value = holidayName
+        With targetSheet.Cells(datesRowNumber - 8, foundColumn)
+            .Value = holidayName
             .Interior.Pattern = xlSolid
             .Interior.ColorIndex = 33
         End With
@@ -362,7 +515,9 @@ Private Sub MarkHoliday(ByVal targetSheet As Worksheet, _
     End If
 End Sub
 
-'@Description("Applies conditional formatting and dropdowns to all tables")
+'@Description("Applies conditional formatting to all tables")
+'@Param useShortForm Whether to use short form codes (default: True)
+'@Param startColumnIndex Starting column for formatting (default: 15)
 Public Sub ApplyConditionalFormattingToTables(Optional ByVal useShortForm As Boolean = True, _
                                                Optional ByVal startColumnIndex As Long = 15)
     Dim targetSheet As Worksheet
@@ -375,20 +530,24 @@ Public Sub ApplyConditionalFormattingToTables(Optional ByVal useShortForm As Boo
     Dim columnIndex As Long
     Dim tempRange As Range
 
-    '--- Collect all cells from column 15+ in all tables
+    '--- Collect all cells from startColumnIndex+ in all tables
     For Each listObj In targetSheet.ListObjects
-        For columnIndex = startColumnIndex To listObj.Range.Columns.Count
-            Set tempRange = listObj.ListColumns(columnIndex).DataBodyRange
-            If Not targetRange Is Nothing Then
-                Set targetRange = Union(targetRange, tempRange)
-            Else
-                Set targetRange = tempRange
-            End If
-        Next columnIndex
+        If Not listObj.DataBodyRange Is Nothing Then
+            For columnIndex = startColumnIndex To listObj.Range.Columns.Count
+                If columnIndex <= listObj.ListColumns.Count Then
+                    Set tempRange = listObj.ListColumns(columnIndex).DataBodyRange
+                    If Not targetRange Is Nothing Then
+                        Set targetRange = Union(targetRange, tempRange)
+                    Else
+                        Set targetRange = tempRange
+                    End If
+                End If
+            Next columnIndex
+        End If
     Next listObj
 
     If targetRange Is Nothing Then
-        MsgBox "Keine gültigen Zellen ab Spalte " & startColumnIndex & " gefunden.", vbExclamation
+        MsgBox "Keine gueltigen Zellen ab Spalte " & startColumnIndex & " gefunden.", vbExclamation
         Exit Sub
     End If
 
@@ -418,9 +577,78 @@ Public Sub ApplyConditionalFormattingToTables(Optional ByVal useShortForm As Boo
             .Interior.Color = currentAbsenceCode.ColorRGB
         End With
     Next codeKey
+End Sub
+
+'@Description("Applies data validation dropdowns with absence codes to all tables")
+'@Param startColumnIndex Starting column for validation (default: 15)
+Public Sub ApplyDataValidationToTables(Optional ByVal startColumnIndex As Long = 15)
+    Dim targetSheet As Worksheet
+    Set targetSheet = ActiveSheet
+
+    Dim targetRange As Range
+    Set targetRange = Nothing
+
+    Dim listObj As ListObject
+    Dim columnIndex As Long
+    Dim tempRange As Range
+
+    '--- Collect all cells from startColumnIndex+ in all tables
+    For Each listObj In targetSheet.ListObjects
+        If Not listObj.DataBodyRange Is Nothing Then
+            For columnIndex = startColumnIndex To listObj.Range.Columns.Count
+                If columnIndex <= listObj.ListColumns.Count Then
+                    Set tempRange = listObj.ListColumns(columnIndex).DataBodyRange
+                    If Not targetRange Is Nothing Then
+                        Set targetRange = Union(targetRange, tempRange)
+                    Else
+                        Set targetRange = tempRange
+                    End If
+                End If
+            Next columnIndex
+        End If
+    Next listObj
+
+    If targetRange Is Nothing Then
+        MsgBox "Keine gueltigen Zellen ab Spalte " & startColumnIndex & " gefunden.", vbExclamation
+        Exit Sub
+    End If
 
     '--- Clear existing validation
     On Error Resume Next
     targetRange.Validation.Delete
     On Error GoTo 0
+
+    '--- Get absence codes for dropdown
+    Dim absenceCodes As Dictionary
+    Set absenceCodes = AbsenceCode.GetAllCodes
+
+    '--- Build comma-separated list of short form codes
+    Dim validationList As String
+    validationList = ""
+
+    Dim codeKey As Variant
+    Dim currentAbsenceCode As AbsenceCode
+
+    For Each codeKey In absenceCodes.Keys
+        Set currentAbsenceCode = absenceCodes(codeKey)
+        If Len(validationList) > 0 Then
+            validationList = validationList & ","
+        End If
+        validationList = validationList & currentAbsenceCode.ShortForm
+    Next codeKey
+
+    '--- Apply data validation
+    If Len(validationList) > 0 Then
+        With targetRange.Validation
+            .Delete
+            .Add Type:=xlValidateList, _
+                 AlertStyle:=xlValidAlertStop, _
+                 Operator:=xlBetween, _
+                 Formula1:=validationList
+            .IgnoreBlank = True
+            .InCellDropdown = True
+            .ShowInput = True
+            .ShowError = False
+        End With
+    End If
 End Sub

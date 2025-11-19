@@ -121,10 +121,19 @@ Public Sub OnRibbonButtonClick(ByVal control As IRibbonControl)
             'NOTE: CUSTOMUI XML: control id="BtnProjectInput"
             Call ShowProjectInput
 
+        '--- Settings Button ---
+        Case "BtnShowSettings"
+            'NOTE: CUSTOMUI XML: control id="BtnShowSettings"
+            'FIX: Added handler for BtnShowSettings to prevent "Unbekannter Button" error
+            'TODO: Implement settings functionality if needed
+            MsgBox "Einstellungen sind noch nicht implementiert.", vbInformation, "Einstellungen"
+
         '--- Calculation Button ---
         Case "BtnRecalculate"
             'NOTE: CUSTOMUI XML: control id="BtnRecalculate"
-            Application.Calculate
+            'FIX: Changed from Application.Calculate to ActiveSheet.Calculate for better performance
+            '     Only recalculates the active sheet instead of entire workbook
+            ActiveSheet.Calculate
             If ActiveSheet.Name = "Auswertung Mitarbeiter" Then
                 Tabelle8.PopulateEmployeeEvaluation
             End If

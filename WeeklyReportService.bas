@@ -167,24 +167,53 @@ End Sub
 
 '@Description("Removes already known projects from the unique projects dictionary")
 Private Sub RemoveKnownProjects(ByRef uniqueProjects As Dictionary)
+    '--- FIX: Use ProjectService.GetProjectSheet() instead of non-existent Tabelle5
+    '--- The original code referenced Tabelle5.ListObjects("Tabelle6") which caused
+    '--- "Blatt 'Projektnummern' nicht gefunden" error because Tabelle5.doccls doesn't exist
+    Dim projectSheet As Worksheet
+    Set projectSheet = ProjectService.GetProjectSheet()
+
+    If projectSheet Is Nothing Then
+        Exit Sub '--- No project sheet found, skip removing known projects
+    End If
+
+    '--- Try to find the project ListObject (could be first table on sheet)
     Dim knownProjectsRange As Range
-    Set knownProjectsRange = Tabelle5.ListObjects("Tabelle6").DataBodyRange.Columns(2)
+    On Error Resume Next
+    If projectSheet.ListObjects.Count > 0 Then
+        '--- Use the first ListObject's second column (project names)
+        Set knownProjectsRange = projectSheet.ListObjects(1).DataBodyRange.Columns(2)
+    End If
+    On Error GoTo 0
+
+    '--- Fallback: If no ListObject, use UsedRange approach
+    If knownProjectsRange Is Nothing Then
+        Dim lastRow As Long
+        lastRow = projectSheet.Cells(projectSheet.Rows.Count, 1).End(xlUp).Row
+        If lastRow > 1 Then
+            Set knownProjectsRange = projectSheet.Range(projectSheet.Cells(2, 2), projectSheet.Cells(lastRow, 2))
+        Else
+            Exit Sub '--- No data
+        End If
+    End If
 
     Dim projectCell As Range
     Dim projectLines() As String
     Dim firstLine As String
 
     For Each projectCell In knownProjectsRange.Cells
-        projectLines = Split(projectCell.value, Chr(10))
+        If Not IsEmpty(projectCell.value) And Not IsError(projectCell.value) Then
+            projectLines = Split(projectCell.value, Chr(10))
 
-        If UBound(projectLines) > 0 Then
-            firstLine = projectLines(0)
-        Else
-            firstLine = projectCell.Value2
-        End If
+            If UBound(projectLines) > 0 Then
+                firstLine = projectLines(0)
+            Else
+                firstLine = projectCell.Value2
+            End If
 
-        If uniqueProjects.Exists(firstLine) Then
-            uniqueProjects.Remove firstLine
+            If uniqueProjects.Exists(firstLine) Then
+                uniqueProjects.Remove firstLine
+            End If
         End If
     Next projectCell
 End Sub
@@ -425,13 +454,27 @@ Public Sub SendWeeklyReportReminder()
     Dim mailItem As Object
     Set mailItem = outlookApp.CreateItem(0) 'olMailItem
 
+    '--- FIX: Use HTMLBody with UTF-8 charset to properly display German umlauts
+    '--- The original .body property doesn't properly encode UTF-8 characters
+    '--- causing umlauts (ä, ö, ü) to display as wrong characters
+    Dim emailBodyHTML As String
+    emailBodyHTML = "<!DOCTYPE html>" & vbNewLine & _
+                    "<html>" & vbNewLine & _
+                    "<head>" & vbNewLine & _
+                    "<meta charset=""UTF-8"">" & vbNewLine & _
+                    "</head>" & vbNewLine & _
+                    "<body style=""font-family: Calibri, Arial, sans-serif; font-size: 11pt;"">" & vbNewLine & _
+                    "<p>Hallo zusammen,</p>" & vbNewLine & _
+                    "<p>bitte gebt noch euren Wochenrapport ab.</p>" & vbNewLine & _
+                    "<p>Vielen Dank!<br>" & vbNewLine & _
+                    "Mit freundlichen Grüssen</p>" & vbNewLine & _
+                    "</body>" & vbNewLine & _
+                    "</html>"
+
     With mailItem
         .To = emailList
         .Subject = "Erinnerung: Wochenrapport " & calendarWeek & " abgeben"
-        .body = "Hallo zusammen," & vbNewLine & vbNewLine & _
-                "bitte gebt noch euren Wochenrapport ab." & vbNewLine & vbNewLine & _
-                "Vielen Dank!" & vbNewLine & _
-                "Mit freundlichen Grüssen"
+        .HTMLBody = emailBodyHTML
         .Importance = 2 'olImportanceHigh
         .Display 'Show email for review
     End With

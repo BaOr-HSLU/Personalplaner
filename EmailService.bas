@@ -79,12 +79,26 @@ Public Sub SendWeeklyPlanPDFToEmployees()
 
     Set mailItem = outlookApp.CreateItem(0) 'olMailItem
 
+    '--- FIX: Use HTMLBody with UTF-8 charset to properly display German umlauts
+    '--- The original .Body property doesn't properly encode UTF-8 characters
+    '--- causing umlauts (ä, ö, ü) to display as wrong characters
+    Dim emailBodyHTML As String
+    emailBodyHTML = "<!DOCTYPE html>" & vbNewLine & _
+                    "<html>" & vbNewLine & _
+                    "<head>" & vbNewLine & _
+                    "<meta charset=""UTF-8"">" & vbNewLine & _
+                    "</head>" & vbNewLine & _
+                    "<body style=""font-family: Calibri, Arial, sans-serif; font-size: 11pt;"">" & vbNewLine & _
+                    "<p>Hallo miteinander,</p>" & vbNewLine & _
+                    "<p>anbei erhaltet ihr die Wochenliste von " & activeWorksheet.Name & ".</p>" & vbNewLine & _
+                    "<p>Mit freundlichen Grüssen</p>" & vbNewLine & _
+                    "</body>" & vbNewLine & _
+                    "</html>"
+
     With mailItem
         .To = emailAddressList
         .Subject = "Wochenliste " & activeWorksheet.Name
-        .Body = "Hallo miteinander," & vbCrLf & vbCrLf & _
-                "anbei erhaltet ihr die Wochenliste von " & activeWorksheet.Name & "." & vbCrLf & vbCrLf & _
-                "Mit freundlichen Grüssen"
+        .HTMLBody = emailBodyHTML
         .Attachments.Add pdfFilePath
         .Display 'Show for review (use .Send for automatic sending)
     End With

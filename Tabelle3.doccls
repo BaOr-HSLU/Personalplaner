@@ -24,18 +24,62 @@ Private Sub Worksheet_Activate()
     UF_Projekte.LoadProjectData
 End Sub
 
-'@Description("Creates new KW sheet when user double-clicks a merged calendar week cell")
+'@Description("Creates new KW sheet when user double-clicks a calendar week cell or ListObject cell")
 '@Param("Target - The double-clicked cell")
 '@Param("Cancel - Set to True to prevent default Excel behavior")
 Private Sub Worksheet_BeforeDoubleClick(ByVal Target As Range, Cancel As Boolean)
-    '--- Only process merged cells (KW headers are merged)
+    On Error GoTo ErrorHandler
+
+    Dim kwHeaderCell As Range
+
+    '--- SCENARIO 1: User double-clicked directly on KW header (merged cell)
     If Target.MergeCells Then
-        WeeklySheetService.CreateWeeklySheet Target
+        Set kwHeaderCell = Target
+        WeeklySheetService.CreateWeeklySheet kwHeaderCell
         Cancel = True
+        GoTo CleanupAndExit
     End If
 
+    '--- SCENARIO 2: User double-clicked on a ListObject cell (data area)
+    'FIX: Extended functionality to work on all ListObject cells, not just merged cells
+    'When clicking in the data area, find the KW header for that column and create the sheet
+    Dim parentTable As ListObject
+    On Error Resume Next
+    Set parentTable = Target.ListObject
+    On Error GoTo ErrorHandler
+
+    If Not parentTable Is Nothing Then
+        '--- Find the KW header for this column by looking at row 8 (KW row)
+        Dim targetColumn As Long
+        targetColumn = Target.Column
+
+        '--- KW headers are in row 8, merged across 5 columns (one work week)
+        '--- Find the merged cell that contains this column
+        Dim kwRow As Long
+        kwRow = 8  '--- Row where KW headers are located
+
+        Set kwHeaderCell = Me.Cells(kwRow, targetColumn)
+
+        '--- If this cell is part of a merged area, get the merged area's first cell
+        If kwHeaderCell.MergeCells Then
+            Set kwHeaderCell = kwHeaderCell.MergeArea.Cells(1, 1)
+        End If
+
+        '--- Only create sheet if we found a valid KW header
+        If kwHeaderCell.MergeCells And Not IsEmpty(kwHeaderCell.Value) Then
+            WeeklySheetService.CreateWeeklySheet kwHeaderCell
+            Cancel = True
+        End If
+    End If
+
+CleanupAndExit:
     '--- Force recalculation after creating new sheet
     Application.Calculate
+    Exit Sub
+
+ErrorHandler:
+    '--- Silently ignore errors (user may have double-clicked on non-relevant cell)
+    Cancel = False
 End Sub
 
 '@Description("Handles recurring weekly entries for School (S) and Part-time (T) absence codes")

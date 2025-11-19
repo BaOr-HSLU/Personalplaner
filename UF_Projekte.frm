@@ -21,6 +21,12 @@ Option Explicit
 Private Const MAIN_PLANNER_FIRST_DAY_COLUMN As Long = 15
 Private Const WEEKLY_SHEET_FIRST_DAY_COLUMN As Long = 5
 
+'@Description("UserForm initialization - automatically loads project data when form opens")
+'FIX: Added this event handler to ensure projects are loaded when opening via Ribbon
+Private Sub UserForm_Initialize()
+    Call LoadProjectData
+End Sub
+
 '@Description("Refresh button click - reloads project data")
 Private Sub CommandButton3_Click()
     Call LoadProjectData
