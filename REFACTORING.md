@@ -22,13 +22,15 @@ Die gesamte Codebase wurde refactoriert mit Fokus auf:
 
 | Datei | Alt | Beschreibung |
 |-------|-----|--------------|
-| `DateHelpers.bas` | mBerechnung.bas (teilweise) | Datums- und Kalender-Hilfsfunktionen |
+| `DateHelpers.bas` | mBerechnung.bas (teilweise), Modul2.bas | Datums- und Kalender-Hilfsfunktionen, Dictionary-Sortierung |
 | `EmployeeService.bas` | mWertesammler.bas | Mitarbeiter-Datensammlung (Performance-optimiert) |
 | `ProjectService.bas` | - (neu) | Projektverwaltung und -speicherung |
 | `CalendarService.bas` | mKalender.bas | Kalender-Erstellung und Formatierung |
 | `WeeklyReportService.bas` | Modul5.bas | Wochenrapport-Erstellung und Email-Versand |
 | `WeeklySheetService.bas` | mKWBlatt.bas | KW-Blatt-Erstellung aus Vorlage |
-| `WorkloadCalculations.bas` | mBerechnung.bas, mAuslastung.bas | UDFs für Excel-Formeln (Auslastung, Verfügbarkeit) |
+| `WorkloadCalculations.bas` | mBerechnung.bas, mAuslastung.bas, Modul3.bas | UDFs für Excel-Formeln (Auslastung, Verfügbarkeit, Stundenzähler) |
+| `EmailService.bas` | Modul4.bas | PDF-Export und Email-Versand |
+| `ValidationHelpers.bas` | mDatenüberprüfung.bas | Datenvalidierungs-Hilfsfunktionen |
 
 ### UI-Module
 
@@ -36,6 +38,7 @@ Die gesamte Codebase wurde refactoriert mit Fokus auf:
 |-------|-----|--------------|
 | `RibbonController.bas` | CustomUI.bas | Custom Ribbon Steuerung |
 | `UF_Projekte.frm` | UF_Projekte.frm | Refactored mit besseren Namen |
+| `UF_Filter.frm` | UF_Filter.frm, mFilter.bas | Refactored, verwendet neue Services |
 | `DieseArbeitsmappe.doccls` | DieseArbeitsmappe.doccls | Workbook Events (aufgeräumt) |
 
 ## ⚠️ WICHTIG: CustomUI Ribbon Änderungen
@@ -171,6 +174,11 @@ End Function
 | `VerweisMABAuslastungTotal()` | `WorkloadCalculations.GetWorkloadByDate()` |
 | `AuslastungMitAusschluss()` | `WorkloadCalculations.CalculateWorkload()` |
 | `VerfuegbareMitarbeiter()` | `WorkloadCalculations.CountAvailableEmployees()` |
+| `Stundenzähler()` | `WorkloadCalculations.CountEmployeeDays()` |
+| `SendFilteredPDFEmailToAll()` | `EmailService.SendWeeklyPlanPDFToEmployees()` |
+| `SortDictionaryAlphabetical()` | `DateHelpers.SortDictionaryAlphabetical()` |
+| `EntferneDatenüberprüfung()` | `ValidationHelpers.RemoveDataValidation()` |
+| `HasListValidation()` | `ValidationHelpers.HasListValidation()` |
 
 ## Testing Checklist
 

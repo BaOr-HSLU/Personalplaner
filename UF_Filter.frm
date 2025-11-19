@@ -1,6 +1,6 @@
 VERSION 5.00
-Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} UF_Filter 
-   Caption         =   "Jahresplanung Filtern"
+Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} UF_Filter
+   Caption         =   "Filter"
    ClientHeight    =   4440
    ClientLeft      =   120
    ClientTop       =   465
@@ -14,128 +14,159 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
 
-
-'@Folder "Personalplaner"
+'@Folder("UI.Forms")
+'@ModuleDescription("Project filter form - filters visible projects in active sheet")
 Option Explicit
 
-Private tempCol                        As Long
-Public LISTE                           As Dictionary
+Private filterStartColumn As Long
+Private cachedUniqueValues As Dictionary
 
+'@Description("Apply filter button - filters rows based on selected values")
 Private Sub CommandButton1_Click()
-    FilterListObjects
+    Call ApplyProjectFilter
     ActiveSheet.Calculate
 End Sub
 
+'@Description("Reset filter button - shows all rows")
 Private Sub CommandButton2_Click()
-    Dim ws                             As Worksheet
-    Dim lo                             As ListObject
-    
+    Call ResetAllFilters
+End Sub
+
+'@Description("Refresh button - reloads project list")
+Private Sub CommandButton3_Click()
+    Call LoadFilterData
+End Sub
+
+'@Description("ListBox double-click - applies filter immediately")
+Private Sub ListBox1_DblClick(ByVal Cancel As MSForms.ReturnBoolean)
+    Call ApplyProjectFilter
+End Sub
+
+'@Description("Applies filter to hide/show rows based on selected projects")
+Private Sub ApplyProjectFilter()
+    Dim targetSheet As Worksheet
+    Set targetSheet = ActiveSheet
+
+    '--- Collect selected values from ListBox
+    Dim selectedValues As Collection
+    Set selectedValues = New Collection
+
+    Dim itemIndex As Long
+    For itemIndex = 0 To ListBox1.ListCount - 1
+        If ListBox1.Selected(itemIndex) Then
+            selectedValues.Add ListBox1.List(itemIndex)
+        End If
+    Next itemIndex
+
+    If selectedValues.Count = 0 Then
+        MsgBox "Bitte w√§hle einen oder mehrere Werte aus.", vbExclamation
+        Exit Sub
+    End If
+
     Application.ScreenUpdating = False
-    For Each ws In ThisWorkbook.Worksheets
-        For Each lo In ws.ListObjects
-            If Not lo.DataBodyRange Is Nothing Then
-                lo.DataBodyRange.EntireRow.Hidden = False
-            End If
-        Next lo
-    Next ws
+
+    '--- First, show all rows
+    Call ResetFiltersInSheet(targetSheet)
+
+    '--- Apply filter by hiding non-matching rows
+    Dim dataTable As ListObject
+    Dim rowIndex As Long
+    Dim columnIndex As Long
+    Dim cellValue As String
+    Dim rowMatches As Boolean
+    Dim selectedValue As Variant
+
+    For Each dataTable In targetSheet.ListObjects
+        If Not dataTable.DataBodyRange Is Nothing Then
+            For rowIndex = 1 To dataTable.DataBodyRange.Rows.Count
+                rowMatches = False
+
+                '--- Check columns from filterStartColumn onwards
+                For columnIndex = filterStartColumn To dataTable.ListColumns.Count
+                    If columnIndex <= dataTable.DataBodyRange.Columns.Count Then
+                        cellValue = Trim$(CStr(dataTable.DataBodyRange.Cells(rowIndex, columnIndex).value))
+
+                        If Len(cellValue) > 0 Then
+                            '--- Check if cell value matches any selected value
+                            For Each selectedValue In selectedValues
+                                If cellValue = selectedValue Then
+                                    rowMatches = True
+                                    Exit For
+                                End If
+                            Next selectedValue
+
+                            If rowMatches Then Exit For
+                        End If
+                    End If
+                Next columnIndex
+
+                '--- Hide row if no match found
+                If Not rowMatches Then
+                    dataTable.DataBodyRange.Rows(rowIndex).EntireRow.Hidden = True
+                End If
+            Next rowIndex
+        End If
+    Next dataTable
+
     Application.ScreenUpdating = True
-    
+
+    Me.Label1.Caption = "Gefiltert nach " & selectedValues.Count & " Wert(en) im aktiven Blatt."
+End Sub
+
+'@Description("Resets all filters - shows all rows in all sheets")
+Private Sub ResetAllFilters()
+    Dim currentSheet As Worksheet
+    Dim dataTable As ListObject
+
+    Application.ScreenUpdating = False
+
+    For Each currentSheet In ThisWorkbook.Worksheets
+        Call ResetFiltersInSheet(currentSheet)
+    Next currentSheet
+
+    Application.ScreenUpdating = True
+
     Me.Label1.Caption = "Alle Zeilen eingeblendet."
 End Sub
 
-Private Sub CommandButton3_Click()
-    LoadData
+'@Description("Resets filters in a specific sheet")
+'@Param targetSheet The worksheet to reset filters in
+Private Sub ResetFiltersInSheet(ByVal targetSheet As Worksheet)
+    Dim dataTable As ListObject
+
+    For Each dataTable In targetSheet.ListObjects
+        If Not dataTable.DataBodyRange Is Nothing Then
+            dataTable.DataBodyRange.EntireRow.Hidden = False
+        End If
+    Next dataTable
 End Sub
 
-Private Sub ListBox1_DblClick(ByVal Cancel As MSForms.ReturnBoolean)
-    FilterListObjects
-End Sub
-
-Private Sub FilterListObjects()
-    Dim ws                             As Worksheet
-    Dim lo                             As ListObject
-    Dim i                              As Long, j As Long, k As Long
-    Dim zellenwert                     As String
-    Dim gefunden                       As Boolean
-    Dim ausgew‰hlteWerte               As Collection
-    
-    Set ws = ActiveSheet
-    
-    ' Sammlung der ausgew‰hlten Werte aus ListBox
-    Set ausgew‰hlteWerte = New Collection
-    For i = 0 To ListBox1.ListCount - 1
-        If ListBox1.Selected(i) Then
-            ausgew‰hlteWerte.Add ListBox1.List(i)
-        End If
-    Next i
-    
-    If ausgew‰hlteWerte.Count = 0 Then
-        MsgBox "Bitte w‰hle einen oder mehrere Werte aus.", vbExclamation
-        Exit Sub
-    End If
-    
-    Application.ScreenUpdating = False
-    
-    ' Alle Zeilen im aktiven Blatt einblenden
-    For Each lo In ws.ListObjects
-        If Not lo.DataBodyRange Is Nothing Then
-            lo.DataBodyRange.EntireRow.Hidden = False
-        End If
-    Next lo
-    
-    ' Filter anwenden (manuelles Ausblenden)
-    For Each lo In ws.ListObjects
-        If Not lo.DataBodyRange Is Nothing Then
-            For i = 1 To lo.DataBodyRange.Rows.Count
-                gefunden = False
-                For j = tempCol To lo.ListColumns.Count
-                    If j <= lo.DataBodyRange.Columns.Count Then
-                        zellenwert = Trim(CStr(lo.DataBodyRange.Cells(i, j).Value))
-                        If Len(zellenwert) > 0 Then
-                            For k = 1 To ausgew‰hlteWerte.Count
-                                If zellenwert = ausgew‰hlteWerte(k) Then
-                                    gefunden = True
-                                    Exit For
-                                End If
-                            Next k
-                            If gefunden Then Exit For
-                        End If
-                    End If
-                Next j
-                If Not gefunden Then
-                    lo.DataBodyRange.Rows(i).EntireRow.Hidden = True
-                End If
-            Next i
-        End If
-    Next lo
-    
-    Application.ScreenUpdating = True
-    
-    Me.Label1.Caption = "Gefiltert nach " & ausgew‰hlteWerte.Count & " Wert(en) im aktiven Blatt."
-End Sub
-
-Public Sub LoadData(Optional ByVal startcol As Long = 0)
-    If startcol = 0 Then
+'@Description("Loads unique project values into ListBox based on active sheet")
+'@Param startColumn Optional start column (auto-detected if 0)
+Public Sub LoadFilterData(Optional ByVal startColumn As Long = 0)
+    '--- Auto-detect start column based on sheet type
+    If startColumn = 0 Then
         If ActiveSheet.Name Like "KW*" Then
-            startcol = 5
+            startColumn = 5
         ElseIf ActiveSheet.Name Like "Personalplaner" Then
-            startcol = 15
+            startColumn = 15
         Else
             Exit Sub
         End If
     End If
-    
-    tempCol = startcol
-    
-    Me.Caption = "Filter " & ActiveSheet.Name
-    
-    Set LISTE = SammleEindeutigeWerteSchnell(startcol)
-    Dim Key                            As Variant
-    With Me.ListBox1
-        .Clear
-        For Each Key In LISTE.Keys
-            .AddItem Key
-        Next Key
-    End With
-End Sub
 
+    filterStartColumn = startColumn
+
+    Me.Caption = "Filter " & ActiveSheet.Name
+
+    '--- Collect unique values using EmployeeService
+    Set cachedUniqueValues = EmployeeService.GetUniqueValuesFromListObjects(startColumn)
+
+    '--- Populate ListBox
+    ListBox1.Clear
+
+    Dim uniqueKey As Variant
+    For Each uniqueKey In cachedUniqueValues.Keys
+        ListBox1.AddItem uniqueKey
+    Next uniqueKey
+End Sub

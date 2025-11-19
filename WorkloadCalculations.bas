@@ -406,3 +406,92 @@ Private Function GetSheetLastUsedColumn(ByVal targetSheet As Worksheet) As Long
 Fail:
     GetSheetLastUsedColumn = 0
 End Function
+
+'@Description("Counts days/hours for an employee matching specific criteria (UDF for Excel formulas)")
+'@Param employeeName The employee name to search for
+'@Param filterCriteria Filter criteria: 'Frei', 'Projekt', or semicolon-separated codes (e.g., 'F;K;U')
+'@Returns Count of matching days
+Public Function CountEmployeeDays(ByVal employeeName As String, ByVal filterCriteria As String) As Double
+    Application.Volatile True
+
+    On Error GoTo ErrorHandler
+
+    Dim callerCell As Range
+    Set callerCell = Application.Caller
+
+    Dim callerSheet As Worksheet
+    Set callerSheet = callerCell.Parent
+
+    '--- Find date range from sheet (E4 and F4 should contain start/end dates)
+    Dim startDate As Date
+    Dim endDate As Date
+    startDate = callerSheet.Range("E4").value
+    endDate = callerSheet.Range("F4").value
+
+    '--- Find date columns in main planner
+    Dim startColumn As Long
+    Dim endColumn As Long
+    startColumn = DateHelpers.FindDateColumn(Tabelle3, 10, startDate)
+    endColumn = DateHelpers.FindDateColumn(Tabelle3, 10, endDate)
+
+    If startColumn = 0 Or endColumn = 0 Then
+        CountEmployeeDays = 0
+        Exit Function
+    End If
+
+    '--- Find employee row in main planner (column G)
+    Dim employeeCell As Range
+    Set employeeCell = Tabelle3.Range("G:G").Find(What:=employeeName, LookAt:=xlWhole)
+
+    If employeeCell Is Nothing Then
+        CountEmployeeDays = 0
+        Exit Function
+    End If
+
+    Dim employeeRow As Long
+    employeeRow = employeeCell.Row
+
+    '--- Define check range (employee row, between start and end columns)
+    Dim checkRange As Range
+    Set checkRange = Tabelle3.Range(Tabelle3.Cells(employeeRow, startColumn), _
+                                     Tabelle3.Cells(employeeRow, endColumn))
+
+    '--- Calculate based on filter criteria
+    Dim dayCount As Double
+    Dim criteriaArray() As String
+    Dim currentCriterion As Variant
+
+    Select Case filterCriteria
+        Case "Frei"
+            '--- Count blank cells
+            dayCount = WorksheetFunction.CountBlank(checkRange)
+
+        Case "Projekt"
+            '--- Count non-absence codes (everything except F, Fx, S, ÜK, U, K, WK, T)
+            Dim absenceCodes() As String
+            absenceCodes = Split("F,Fx,S,ÜK,U,K,WK,T", ",")
+
+            dayCount = 0
+            For Each currentCriterion In absenceCodes
+                dayCount = dayCount + WorksheetFunction.CountIf(checkRange, currentCriterion)
+            Next currentCriterion
+
+            '--- Total cells minus absence codes = project days
+            dayCount = WorksheetFunction.CountA(checkRange) - dayCount
+
+        Case Else
+            '--- Custom criteria (semicolon-separated, e.g., "F;K;U")
+            criteriaArray = Split(filterCriteria, ";")
+
+            dayCount = 0
+            For Each currentCriterion In criteriaArray
+                dayCount = dayCount + WorksheetFunction.CountIf(checkRange, Trim$(currentCriterion))
+            Next currentCriterion
+    End Select
+
+    CountEmployeeDays = dayCount
+    Exit Function
+
+ErrorHandler:
+    CountEmployeeDays = CVErr(xlErrValue)
+End Function

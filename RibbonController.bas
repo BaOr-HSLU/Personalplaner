@@ -132,8 +132,7 @@ Public Sub OnRibbonButtonClick(ByVal control As IRibbonControl)
         '--- Weekly Report Buttons ---
         Case "BtnSendWeeklyPlan"
             '⚠️ CUSTOMUI XML: control id="BtnSendWeeklyPlan"
-            '@Todo Implement SendFilteredPDFEmailToAll
-            MsgBox "Funktion 'PDF senden' noch nicht implementiert", vbInformation
+            EmailService.SendWeeklyPlanPDFToEmployees
 
         Case "BtnRequestWeeklyReports"
             '⚠️ CUSTOMUI XML: control id="BtnRequestWeeklyReports"
