@@ -31,6 +31,7 @@ Die gesamte Codebase wurde refactoriert mit Fokus auf:
 | `WorkloadCalculations.bas` | mBerechnung.bas, mAuslastung.bas, Modul3.bas | UDFs für Excel-Formeln (Auslastung, Verfügbarkeit, Stundenzähler) |
 | `EmailService.bas` | Modul4.bas | PDF-Export und Email-Versand |
 | `ValidationHelpers.bas` | mDatenüberprüfung.bas | Datenvalidierungs-Hilfsfunktionen |
+| `FilterService.bas` | mFilter.bas | Table filtering mit ActiveX ListBox controls |
 
 ### UI-Module
 
@@ -179,6 +180,8 @@ End Function
 | `SortDictionaryAlphabetical()` | `DateHelpers.SortDictionaryAlphabetical()` |
 | `EntferneDatenüberprüfung()` | `ValidationHelpers.RemoveDataValidation()` |
 | `HasListValidation()` | `ValidationHelpers.HasListValidation()` |
+| `ApplyTableFilter()` | `FilterService.ApplyTableFilter()` |
+| `InitListBox()` | `WeeklySheetService.InitializeFilterListBox()` |
 
 ## Testing Checklist
 
