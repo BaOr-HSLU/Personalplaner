@@ -1,7 +1,40 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+---
+
 # Personalplaner - AI Assistant Guide
 
 **Version**: 2.0 (Refactored)
 **Last Updated**: 2025-11-19
+
+## Quick Start
+
+**What is this?** Excel VBA personnel management system for Swiss organizations with calendar scheduling, absence tracking, and automated reporting.
+
+**Language:** German (Switzerland) | **Platform:** Excel VBA 7 (64-bit) | **Architecture:** Service-oriented with domain models
+
+**Key Files:**
+- `CalendarService.bas` - Calendar creation and management
+- `WeeklySheetService.bas` - Weekly planning sheets (KW)
+- `WeeklyReportService.bas` - Report generation and email reminders
+- `Tabelle3.doccls` - Main Personalplaner worksheet
+- `RibbonController.bas` - Custom Excel Ribbon UI
+- `customUI.xml` - Ribbon configuration
+
+**Critical Rules:**
+1. Always use CodeNames (Tabelle3, not "Personalplaner")
+2. Format weekday cells as TEXT first (`NumberFormat = "@"`)
+3. Use `.HTMLBody` with UTF-8 for emails (not `.Body`)
+4. Keep `Application.Calculation = xlCalculationManual` (never automatic)
+5. Multi-line cells use `vbNewLine` (Chr(10)) - format: Name\nPhone\nEmail
+6. Only ASCII characters in VBA code (no ä, ö, ü, emojis)
+7. Calendar structure: Row 8=KW, Row 9=Month, Row 10=Weekdays (MO-FR)
+
+**Testing:** All changes pushed to branch `claude/claude-md-mi5rpfamsyrm1wyu-01Wj9LJQ5P84ehTKbnzcyXLx`
+
+---
 
 ## Project Overview
 
