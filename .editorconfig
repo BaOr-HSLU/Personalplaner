@@ -1,0 +1,66 @@
+# EditorConfig für Personalplaner
+# https://editorconfig.org
+
+# Top-most EditorConfig file
+root = true
+
+# Defaults für alle Dateien
+[*]
+charset = utf-8
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# VBA Source Files (Windows CRLF)
+[*.{bas,cls,doccls,frm}]
+end_of_line = crlf
+indent_style = space
+indent_size = 4
+max_line_length = 120
+
+# Markdown Files
+[*.md]
+end_of_line = lf
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = false  # Erlaubt trailing spaces für Markdown line breaks
+
+# YAML Files (GitHub Actions, etc.)
+[*.{yml,yaml}]
+end_of_line = lf
+indent_style = space
+indent_size = 2
+
+# JSON Files
+[*.json]
+end_of_line = lf
+indent_style = space
+indent_size = 2
+
+# Git Files
+[.gitignore]
+end_of_line = lf
+
+[.gitattributes]
+end_of_line = lf
+
+# Documentation
+[*.txt]
+end_of_line = lf
+
+# Excel Files - binary, keine Formatierung
+[*.{xlsm,xlsx,xlsb,xls}]
+charset = unset
+end_of_line = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+indent_style = unset
+indent_size = unset
+
+# VBA Binary Files - binary, keine Formatierung
+[*.frx]
+charset = unset
+end_of_line = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+indent_style = unset
+indent_size = unset

@@ -1,0 +1,47 @@
+# Git Attributes for Personalplaner
+
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# VBA Source Files - treat as text with Windows line endings
+*.bas text eol=crlf
+*.cls text eol=crlf
+*.doccls text eol=crlf
+*.frm text eol=crlf
+
+# VBA Binary Files - treat as binary
+*.frx binary
+*.xlsm binary
+*.xlam binary
+
+# Documentation
+*.md text eol=lf
+*.txt text eol=lf
+
+# Git Files
+.gitignore text eol=lf
+.gitattributes text eol=lf
+.editorconfig text eol=lf
+
+# GitHub Templates
+.github/** text eol=lf
+
+# Excel Files - binary
+*.xlsx binary
+*.xls binary
+*.xlsb binary
+
+# Office Temp Files - ignore
+~$* binary
+
+# Visual Basic Project Files
+*.vbproj text eol=crlf
+
+# Git Diff for VBA files
+*.bas diff
+*.cls diff
+*.doccls diff
+*.frm diff
+
+# Git LFS (Large File Storage) - optional, falls Excel-Dateien groß werden
+# *.xlsm filter=lfs diff=lfs merge=lfs -text
