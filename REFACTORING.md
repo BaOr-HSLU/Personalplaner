@@ -186,16 +186,34 @@ End Function
 ## Testing Checklist
 
 Nach dem Import testen:
+Durchgeführt am 19.11.2025 13:22
 
-- [ ] Ribbon-Buttons funktionieren alle
-- [ ] Kalender erstellen funktioniert
-- [ ] KW-Blatt erstellen funktioniert
-- [ ] Wochenrapporte erstellen funktioniert
-- [ ] Email-Erinnerungen senden funktioniert
-- [ ] Projektauswahl-Form funktioniert
-- [ ] UDFs in Formeln funktionieren (`=GetWorkloadByDate(...)`)
-- [ ] Filter-Funktionen funktionieren
-- [ ] Conditional Formatting wird korrekt angewendet
+- [x] Ribbon-Buttons funktionieren alle
+  - Unbekannter Button: BtnShowSettings
+  - Refresh soll nur das aktuelle Blatt neu rechnen um schnell zu bleiben.
+- [x] Kalender erstellen funktioniert
+  - Wenn bereits ein Kalender besteht kommen Fehlermeldungen und die Verbundenen Zellem werden komisch miteinander verbunden.
+  - Die Zellen mit dem Datum sind noch mit falschen Zeichenfolgen beschriftet, nicht mit dem Datum.
+  - Das Listobject welches mit den Mitarbeiter abgefüllt ist soll auf die neu erstellten Tage angepasst werden.
+  - Das Dropdown Menü mit den Absenzcodes fehlt. Bitte ergänzen.
+  - **ZUSATZ**
+    - Ich will die Tage untereinander noch mit einer gestrichelten Linie unterteilen. Nicht nur die Kalenderwochen.
+    - Ich will die Tage in der ausgewählten Zeile als MO, DI, MI, DO, FR formatieren haben "TTT" und die Spalten auf eine Breite von 2.0 erhöhen.
+    - Estelle einen neuen Button um die ausgewählte Kalenderwoche als Wochenrapport zu öffnen oder erstellen.
+    - Ändere das verhalten vom Doppelklick , so dass er auf allen Zellen in dem Listobject funktioniert.
+- [x] KW-Blatt erstellen funktioniert
+  - aktualisiere das Ribbon sobald das blatt erstellt wurde.
+- [x] Wochenrapporte erstellen funktioniert
+  - Fehler: Blatt 'Projektnummern' nicht gefunden!
+  - die Rapporte werden trotz dem Fehler korrekt erstellt.
+- [x] Email-Erinnerungen senden funktioniert
+  - auch hier die codierung beachten! ü wird als Ã¼ angezeigt.
+- [x] Projektauswahl-Form funktioniert
+  - Es lädt die Projekte nicht, wenn ich es über den Ribbon öffne.
+- [x] UDFs in Formeln funktionieren (`=GetWorkloadByDate(...)`)
+- [x] Filter-Funktionen funktionieren
+- [?] Conditional Formatting wird korrekt angewendet
+  - Nein, sie wird gar nicht angezeigt.
 
 ## Bekannte TODOs
 
