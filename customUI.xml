@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<customUI xmlns="http://schemas.microsoft.com/office/2009/07/customui"
+          xmlns:MARE="Marechaux" onLoad="OnLoad_PersonalPlaner">
+    <ribbon>
+        <!-- das MARE hinter den Callbacks mit der Tool-Beschriftung austauschen, um Verwechslungen im Ribbon zu minimieren -->
+        <tabs>
+            <tab idQ="MARE:Mare-Tab" label="Maréchaux" insertAfterMso="TabHome">
+
+                <!-- Schutz-Gruppe -->
+                <group id="GroupProtection" label="Schutz">
+                    <button id="BtnUnlock" label="Entsperrt"
+                        supertip="Das Arbeitsblatt für die Bearbeitung sperren."
+                        onAction="OnRibbonButtonClick"
+                        getVisible="GetControlVisibility"
+                        image="UNLOCK"/>
+                    <button id="BtnLock" label="Gesperrt"
+                        screentip="Passwort Eingeben"
+                        supertip="Das Arbeitsblatt ist für die Bearbeitung gesperrt."
+                        onAction="OnRibbonButtonClick"
+                        getVisible="GetControlVisibility"
+                        image="LOCK"/>
+                </group>
+
+                <!-- Dashboard/Übersicht-Gruppe -->
+                <group id="TabDashboard" label="Übersicht" getVisible="GetControlVisibility">
+                    <button id="BtnGoToToday" label="Heute"
+                        screentip="zu heute springen"
+                        supertip="Springt zum heutigen Tag in der Jahresübersicht"
+                        size="large"
+                        onAction="OnRibbonButtonClick"
+                        image="TODAY" />
+                    <button id="BtnShowOverview" label="Jahresplan"
+                        screentip="Jahresübersicht öffnen"
+                        supertip="Öffnet die Jahresübersicht aus welcher Wochenpläne erstellt werden können."
+                        size="large"
+                        onAction="OnRibbonButtonClick"
+                        image="TIMELINE-WEEK" />
+                    <button id="BtnShowDashboard" label="Auswertung"
+                        screentip="Auswertung erstellen"
+                        supertip="Daten werden vom gewählten Zeitraum ausgewertet und können danach gefiltert werden."
+                        size="large"
+                        onAction="OnRibbonButtonClick"
+                        image="TEST-PASSED" />
+                    <button id="BtnShowChart" label="Diagramm"
+                        screentip="Diagramm Auswertung"
+                        supertip="Diagramm der ausgewerteten Daten auf dem Blatt Mitarbeiterauswertung anzeigen."
+                        size="large"
+                        onAction="OnRibbonButtonClick"
+                        image="ANALYTICS" />
+                    <button id="BtnShowSettings" label="Parameter"
+                        screentip="Teams und Kürzel"
+                        supertip="Dropdown für Teams und Kürzel im Jahresplaner anpassen"
+                        size="large"
+                        onAction="OnRibbonButtonClick"
+                        image="SETTINGS"/>
+                    <separator id="Separator1"/>
+                    <button id="BtnShowFilter" label="Filter"
+                        screentip="Filter"
+                        supertip="Fenster mit Filter öffnen, wenn dies nicht automatisch geöffnet wird."
+                        onAction="OnRibbonButtonClick"
+                        image="FILTER" />
+                    <button id="BtnShowProjects" label="Projekt"
+                        screentip="Projekt"
+                        supertip="Projektfenster öffnen für schnelleres Ausfüllen von Projekten in den verschiedenen Ansichten."
+                        onAction="OnRibbonButtonClick"
+                        image="PROJECT" />
+                    <button id="BtnRecalculate" label="Refresh"
+                        screentip="Neuberechnen"
+                        supertip="Formeln neu berechnen"
+                        onAction="OnRibbonButtonClick"
+                        image="SYNC" />
+                    <button id="BtnProjectInput" label="Projekte"
+                        screentip="Projekte erfassen"
+                        supertip="Kommissionsnummer, Projektbezeichnung und Kunde für Wochenrapport eintragen"
+                        onAction="OnRibbonButtonClick"
+                        image="ADD" />
+                </group>
+
+                <!-- Wochenplan-Gruppe -->
+                <group id="TabWeeklyPlan" label="Wochenplan" getVisible="GetControlVisibility">
+                    <button id="BtnSendWeeklyPlan" label="WP versenden"
+                        screentip="Wochenplan versenden"
+                        supertip="Wochenplan an die gefilterten Mitarbeiter versenden. Das PDF wird im selben Ordner abgelegt wie der Personalplaner."
+                        onAction="OnRibbonButtonClick"
+                        image="PDF-MAIL" />
+                    <button id="BtnRequestWeeklyReports" label="WR einfordern"
+                        screentip="Wochenrapporte einfordern"
+                        supertip="Nicht abgegebene Wochenrapporte von den gefilterten Mitarbeitern einfordern."
+                        onAction="OnRibbonButtonClick"
+                        image="INVITE" />
+                    <button id="BtnCreateWeeklyReports" label="WR erstellen"
+                        screentip="Wochenrapporte erstellen"
+                        supertip="Erstellt für die sichtbaren Mitarbeiter, welche den WR noch nicht abgegeben haben, einen Wochenrapport mit den eingetragenen Projekten."
+                        onAction="OnRibbonButtonClick"
+                        image="CREATE" />
+                </group>
+
+                <!-- Hilfemenu über alle MARE-Ribbons -->
+                <group idQ="MARE:Mare-Group-help" label="Hilfe">
+                    <menu idQ="MARE:CBAnleitungen" label="Anleitungen" image="icons8-user-manual-50">
+                        <button idQ="MARE:PERSPLA" label="Personalplanung"
+                            screentip="Anleitung Personalplanung"
+                            supertip="Öffnet die Anleitung für die Personalplanung."
+                            onAction="OnRibbonButtonClick"
+                            image="USER-MANUAL" />
+                    </menu>
+                </group>
+            </tab>
+        </tabs>
+    </ribbon>
+</customUI>
