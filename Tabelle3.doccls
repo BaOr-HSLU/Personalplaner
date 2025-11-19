@@ -1,0 +1,40 @@
+﻿'@Folder "Personalplaner"
+Public Sub KalenderErstellen()
+    ErstelleKalenderMitArbeitstagen ActiveSheet.Range("O10")
+End Sub
+
+Private Sub Worksheet_Activate()
+    UF_Filter.LoadData AnfangsspalteVorherigeKW
+    UF_Projekte.LoadData
+End Sub
+
+Private Sub Worksheet_BeforeDoubleClick(ByVal Target As Range, Cancel As Boolean)
+    If Target.MergeCells Then
+        NeuesKWBlattErstellen Target
+        Cancel = True
+    End If
+    Application.Calculate
+End Sub
+
+
+Private Sub Worksheet_Change(ByVal Target As Range)
+    Dim lo As ListObject
+    Dim i As Long
+    Application.EnableEvents = False
+    If Target.Cells.Count > 1 Then Exit Sub
+    If Target.Value = "S" Or Target.Value = "T" Then
+        If MsgBox("Soll die Schule für jede Woche eingetragen werden?", vbYesNo, "Serientermin Eintragen") = vbYes Then
+            Set lo = Target.ListObject
+            i = 5 ' Start mit 5 Spalten weiter
+            
+            ' Solange innerhalb der Tabelle
+            While Target.Column + i <= lo.Range.Columns.Count + lo.Range.Column - 1
+                Target.offset(0, i).Value = Target.Value
+                i = i + 5
+            Wend
+        End If
+    End If
+    
+    Application.EnableEvents = True
+
+End Sub

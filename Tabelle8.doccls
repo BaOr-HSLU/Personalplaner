@@ -1,0 +1,70 @@
+﻿'@Folder "WOCHENPLANER"
+Option Explicit
+
+
+Private Sub ListBoxFunktion_Change()
+    ApplyTableFilter Me, "ListBoxFunktion", "Funktion"
+    Application.Calculate
+End Sub
+
+Private Sub ListBoxMitarbeiter_Change()
+    ApplyTableFilter Me, "ListBoxMitarbeiter", "Mitarbeiter"
+    Application.Calculate
+End Sub
+
+Private Sub ListBoxTeam_Change()
+    ApplyTableFilter Me, "ListBoxTeam", "Team"
+    Application.Calculate
+End Sub
+
+Public Sub Auswerten()
+    Application.ScreenUpdating = False
+    Application.Calculation = xlCalculationManual
+    Application.StatusBar = "Auswertung gestartet"
+    Application.EnableEvents = False
+    Application.DisplayAlerts = False
+    'On Error GoTo ErrHandler
+    
+    Dim lo                             As ListObject, loMAB As ListObject
+    Dim rng                            As Range
+    Dim arr                            As Variant
+    Dim i                              As Long
+    Dim MABCount As Long
+    
+    ' Tabelle referenzieren
+    Set lo = Tabelle3.ListObjects("tblAL")
+    MABCount = lo.ListRows.Count
+    Set loMAB = Me.ListObjects("tblAuswertung")
+    
+    If loMAB.ListRows.Count > 0 Then
+        loMAB.DataBodyRange.Delete
+    End If
+    
+    ' Bereich: erste Spalte + Offset 5 Spalten (also Spalte 6 der Tabelle)
+    Set rng = lo.DataBodyRange.Columns(1).offset(0, 6)
+    
+    ' Werte als Array (2D)
+    arr = rng.Value2
+    
+    ' Array durchlaufen und Einträge hinzufügen
+    For i = LBound(arr, 1) To UBound(arr, 1)
+    Application.StatusBar = "Auswertung " & i & " von " & MABCount
+        If Len(Trim$(arr(i, 1))) > 0 Then
+            loMAB.ListRows.Add.Range(1, 2).Value = CStr(arr(i, 1))
+        End If
+    Next i
+    
+    Application.Calculate
+    InitListBox Me, "ListBoxMitarbeiter", "Mitarbeiter"
+    InitListBox Me, "ListBoxFunktion", "Funktion"
+    InitListBox Me, "ListBoxTeam", "Team"
+    
+    Application.EnableEvents = True
+    Me.Calculate
+    Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+    Application.Calculation = xlCalculationManual
+    Exit Sub
+ErrHandler:
+    MsgBox "Fehler beim Laden der Mitarbeiter: " & Err.Description, vbCritical, "Fehler"
+End Sub

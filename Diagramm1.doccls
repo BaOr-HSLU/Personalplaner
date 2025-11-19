@@ -1,0 +1,50 @@
+﻿Private Sub Chart_Activate()
+    Dim titel                          As String
+    Dim startdate                      As String
+    Dim enddate                        As String
+    Dim team                           As String
+    
+    startdate = CStr(Format(Tabelle8.Range("E4").Value2, "DD.MM.YYYY"))
+    enddate = CStr(Format(Tabelle8.Range("F4").Value2, "DD.MM.YYYY"))
+    team = " " & ListboxToString(Tabelle8, "ListboxTeam")
+    
+    titel = "Mitarbeiterauswertung" & team & vbNewLine & "von " & startdate & " bis " & enddate
+    
+    With ActiveChart
+        .HasTitle = True
+        .ChartTitle.Text = titel
+    End With
+    
+    Application.Calculate
+    
+End Sub
+
+Function ListboxToString(ws As Worksheet, listBoxName As String) As String
+    Dim lb                             As MSForms.Listbox
+    Set lb = ws.OLEObjects(listBoxName).Object
+    
+    Dim selItems                       As New Collection
+    
+    Dim i                              As Long
+    For i = 0 To lb.ListCount - 1
+        If columnName = "Mitarbeiter" Then
+            If lb.Selected(i) Then selItems.Add lb.List(i) & "*"
+        Else
+            If lb.Selected(i) Then selItems.Add lb.List(i)
+        End If
+    Next i
+    
+    If selItems.Count = 0 Then
+        ListboxToString = vbNullString
+        Exit Function
+    End If
+    
+    ' Array mit Auswahlwerten bauen
+    Dim arr()                          As Variant
+    ReDim arr(1 To selItems.Count)
+    For i = 1 To selItems.Count
+        arr(i) = selItems(i)
+    Next i
+    
+    ListboxToString = Join(arr())
+End Function
