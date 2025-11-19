@@ -197,7 +197,7 @@ Private Sub FinalizeCalendarWeek(ByVal targetSheet As Worksheet, _
     With targetSheet.Range(targetSheet.Cells(dataRow + DATE_ROW_OFFSET, startColumn), _
                            targetSheet.Cells(dataRow + DATE_ROW_OFFSET, endColumn))
         .Merge
-        .value = Format(firstDayDate, "dd") & "–" & Format(lastDayDate, "dd")
+        .value = Format(firstDayDate, "dd") & "-" & Format(lastDayDate, "dd")
         .HorizontalAlignment = xlCenter
         .Font.Bold = False
         .Font.Size = 8

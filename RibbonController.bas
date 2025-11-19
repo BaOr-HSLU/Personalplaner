@@ -3,8 +3,8 @@ Attribute VB_Name = "RibbonController"
 '@ModuleDescription("Manages Custom Ribbon UI interactions and navigation")
 Option Explicit
 
-'⚠️ IMPORTANT: Control IDs in this module must match your CustomUI XML ribbon configuration!
-'   If you change control IDs here, update the corresponding XML file.
+'WARNING: Control IDs in this module must match your CustomUI XML ribbon configuration!
+'         If you change control IDs here, update the corresponding XML file.
 
 Private ribbonUI As IRibbonUI
 Private isRibbonLocked As Boolean
@@ -30,7 +30,7 @@ Private isRibbonLocked As Boolean
 End Function
 
 '@Description("Callback: Ribbon onLoad - Initialize ribbon reference")
-'⚠️ CUSTOMUI XML CALLBACK: onLoad="OnLoad_PersonalPlaner"
+'NOTE: CUSTOMUI XML CALLBACK: onLoad="OnLoad_PersonalPlaner"
 Public Sub OnLoad_PersonalPlaner(ByVal ribbon As IRibbonUI)
     #If VBA7 Then
         Dim ribbonPointerStorage As LongPtr
@@ -68,15 +68,15 @@ RestartRequired:
 End Sub
 
 '@Description("Callback: Controls visibility based on active sheet")
-'⚠️ CUSTOMUI XML CALLBACK: getVisible="GetControlVisibility"
+'NOTE: CUSTOMUI XML CALLBACK: getVisible="GetControlVisibility"
 Public Sub GetControlVisibility(ByVal control As IRibbonControl, ByRef returnVisible As Boolean)
     Select Case control.id
         Case "TabDashboard"
-            '⚠️ CUSTOMUI XML: control id="TabDashboard"
+            'NOTE: CUSTOMUI XML: control id="TabDashboard"
             returnVisible = True
 
         Case "TabWeeklyPlan"
-            '⚠️ CUSTOMUI XML: control id="TabWeeklyPlan"
+            'NOTE: CUSTOMUI XML: control id="TabWeeklyPlan"
             '--- Only show when in a KW sheet
             returnVisible = (ActiveSheet.Name Like "KW*")
 
@@ -86,60 +86,60 @@ Public Sub GetControlVisibility(ByVal control As IRibbonControl, ByRef returnVis
 End Sub
 
 '@Description("Callback: Button click handler")
-'⚠️ CUSTOMUI XML CALLBACK: onAction="OnRibbonButtonClick"
+'NOTE: CUSTOMUI XML CALLBACK: onAction="OnRibbonButtonClick"
 Public Sub OnRibbonButtonClick(ByVal control As IRibbonControl)
     On Error GoTo ErrorHandler
 
     Select Case control.id
         '--- Navigation Buttons ---
         Case "BtnGoToToday"
-            '⚠️ CUSTOMUI XML: control id="BtnGoToToday"
+            'NOTE: CUSTOMUI XML: control id="BtnGoToToday"
             Call NavigateToToday
 
         Case "BtnShowOverview"
-            '⚠️ CUSTOMUI XML: control id="BtnShowOverview"
+            'NOTE: CUSTOMUI XML: control id="BtnShowOverview"
             Call NavigateToOverview
 
         Case "BtnShowDashboard"
-            '⚠️ CUSTOMUI XML: control id="BtnShowDashboard"
+            'NOTE: CUSTOMUI XML: control id="BtnShowDashboard"
             Call NavigateToDashboard
 
         Case "BtnShowChart"
-            '⚠️ CUSTOMUI XML: control id="BtnShowChart"
+            'NOTE: CUSTOMUI XML: control id="BtnShowChart"
             Call NavigateToChart
 
         '--- Filter & Project Buttons ---
         Case "BtnShowFilter"
-            '⚠️ CUSTOMUI XML: control id="BtnShowFilter"
+            'NOTE: CUSTOMUI XML: control id="BtnShowFilter"
             UF_Filter.Show 0
 
         Case "BtnShowProjects"
-            '⚠️ CUSTOMUI XML: control id="BtnShowProjects"
+            'NOTE: CUSTOMUI XML: control id="BtnShowProjects"
             UF_Projekte.Show 0
 
         Case "BtnProjectInput"
-            '⚠️ CUSTOMUI XML: control id="BtnProjectInput"
+            'NOTE: CUSTOMUI XML: control id="BtnProjectInput"
             Call ShowProjectInput
 
         '--- Calculation Button ---
         Case "BtnRecalculate"
-            '⚠️ CUSTOMUI XML: control id="BtnRecalculate"
+            'NOTE: CUSTOMUI XML: control id="BtnRecalculate"
             Application.Calculate
             If ActiveSheet.Name = "Auswertung Mitarbeiter" Then
-                Tabelle8.Auswerten
+                Tabelle8.PopulateEmployeeEvaluation
             End If
 
         '--- Weekly Report Buttons ---
         Case "BtnSendWeeklyPlan"
-            '⚠️ CUSTOMUI XML: control id="BtnSendWeeklyPlan"
+            'NOTE: CUSTOMUI XML: control id="BtnSendWeeklyPlan"
             EmailService.SendWeeklyPlanPDFToEmployees
 
         Case "BtnRequestWeeklyReports"
-            '⚠️ CUSTOMUI XML: control id="BtnRequestWeeklyReports"
+            'NOTE: CUSTOMUI XML: control id="BtnRequestWeeklyReports"
             WeeklyReportService.SendWeeklyReportReminder
 
         Case "BtnCreateWeeklyReports"
-            '⚠️ CUSTOMUI XML: control id="BtnCreateWeeklyReports"
+            'NOTE: CUSTOMUI XML: control id="BtnCreateWeeklyReports"
             WeeklyReportService.CreateWeeklyReports
 
         Case Else

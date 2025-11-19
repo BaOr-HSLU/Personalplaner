@@ -3,10 +3,10 @@
 ## Übersicht
 
 Die gesamte Codebase wurde refactoriert mit Fokus auf:
-- ✅ **Rubberduck-Annotationen** (@Folder, @Description, @Todo)
-- ✅ **Verständliche Variablen-/Parameternamen** (keine Abkürzungen wie MAB, lkey)
-- ✅ **Performance-Optimierung** (200+ Mitarbeiter über 5 Jahre)
-- ✅ **Modulare Architektur** (Klassen + Services)
+- **Rubberduck-Annotationen** (@Folder, @Description, @Todo)
+- **Verständliche Variabeln-/Parameternamen** (keine Abkürzungen wie MAB, lkey)
+- **Performance-Optimierung** (200+ Mitarbeiter über 5 Jahre)
+- **Modulare Architektur** (Klassen + Services)
 
 ## Neue Struktur
 
@@ -42,7 +42,7 @@ Die gesamte Codebase wurde refactoriert mit Fokus auf:
 | `UF_Filter.frm` | UF_Filter.frm, mFilter.bas | Refactored, verwendet neue Services |
 | `DieseArbeitsmappe.doccls` | DieseArbeitsmappe.doccls | Workbook Events (aufgeräumt) |
 
-## ⚠️ WICHTIG: CustomUI Ribbon Änderungen
+## WICHTIG: CustomUI Ribbon Aenderungen
 
 Die Control-IDs im Ribbon XML müssen angepasst werden!
 
