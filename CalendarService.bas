@@ -90,10 +90,9 @@ Public Sub CreateWorkDayCalendar(ByVal startCell As Range)
         If Weekday(currentDate, vbMonday) <= 5 Then
             Application.StatusBar = currentYear & " / " & currentMonth & " / " & currentCalendarWeek & " / " & currentDate
 
-            '--- FIX #3 & #7: Write weekday name (MO/DI/MI/DO/FR) instead of day number
-            '--- FIX: Format as Text FIRST to prevent Excel from interpreting as date
-            targetSheet.Cells(currentRow, currentColumn).NumberFormat = "@"
-            targetSheet.Cells(currentRow, currentColumn).Value = Format(currentDate, "ddd")
+            '--- Store actual date as value with weekday format (Mo, Di, Mi, Do, Fr)
+            targetSheet.Cells(currentRow, currentColumn).Value = currentDate
+            targetSheet.Cells(currentRow, currentColumn).NumberFormat = "TTT"  '--- German short weekday format
             targetSheet.Cells(currentRow, currentColumn).HorizontalAlignment = xlCenter
             targetSheet.Cells(currentRow, currentColumn).Font.Bold = True
             targetSheet.Cells(currentRow, currentColumn).Font.Size = 8
@@ -272,7 +271,23 @@ Private Sub FinalizeCalendarWeek(ByVal targetSheet As Worksheet, _
         .HorizontalAlignment = xlCenter
         .Font.Bold = True
         .Font.Size = 10
-        With .Borders
+        '--- Only set outer borders, not inner vertical lines
+        With .Borders(xlEdgeTop)
+            .LineStyle = xlContinuous
+            .Weight = xlMedium
+            .Color = RGB(0, 0, 0)
+        End With
+        With .Borders(xlEdgeBottom)
+            .LineStyle = xlContinuous
+            .Weight = xlMedium
+            .Color = RGB(0, 0, 0)
+        End With
+        With .Borders(xlEdgeLeft)
+            .LineStyle = xlContinuous
+            .Weight = xlMedium
+            .Color = RGB(0, 0, 0)
+        End With
+        With .Borders(xlEdgeRight)
             .LineStyle = xlContinuous
             .Weight = xlMedium
             .Color = RGB(0, 0, 0)
@@ -299,7 +314,23 @@ Private Sub FinalizeCalendarWeek(ByVal targetSheet As Worksheet, _
         .HorizontalAlignment = xlCenter
         .Font.Bold = False
         .Font.Size = 8
-        With .Borders
+        '--- Only set outer borders, not inner vertical lines
+        With .Borders(xlEdgeTop)
+            .LineStyle = xlContinuous
+            .Weight = xlThin
+            .Color = RGB(0, 0, 0)
+        End With
+        With .Borders(xlEdgeBottom)
+            .LineStyle = xlContinuous
+            .Weight = xlThin
+            .Color = RGB(0, 0, 0)
+        End With
+        With .Borders(xlEdgeLeft)
+            .LineStyle = xlContinuous
+            .Weight = xlThin
+            .Color = RGB(0, 0, 0)
+        End With
+        With .Borders(xlEdgeRight)
             .LineStyle = xlContinuous
             .Weight = xlThin
             .Color = RGB(0, 0, 0)
@@ -323,7 +354,23 @@ Private Sub FinalizeMonth(ByVal targetSheet As Worksheet, _
         .HorizontalAlignment = xlCenter
         .Font.Bold = True
         .Font.Size = 11
-        With .Borders
+        '--- Only set outer borders, not inner vertical lines
+        With .Borders(xlEdgeTop)
+            .LineStyle = xlContinuous
+            .Weight = xlMedium
+            .Color = RGB(0, 0, 0)
+        End With
+        With .Borders(xlEdgeBottom)
+            .LineStyle = xlContinuous
+            .Weight = xlMedium
+            .Color = RGB(0, 0, 0)
+        End With
+        With .Borders(xlEdgeLeft)
+            .LineStyle = xlContinuous
+            .Weight = xlMedium
+            .Color = RGB(0, 0, 0)
+        End With
+        With .Borders(xlEdgeRight)
             .LineStyle = xlContinuous
             .Weight = xlMedium
             .Color = RGB(0, 0, 0)
@@ -418,11 +465,17 @@ Private Sub MarkVacationPeriod(ByVal targetSheet As Worksheet, _
             .Value = vacationName
             .Font.Size = 6
             .HorizontalAlignment = xlCenter
-            With .Borders
-                .LineStyle = xlContinuous
-                .Weight = xlMedium
-                .Color = RGB(0, 0, 0)
-            End With
+            '--- Only add borders if vacation name is not empty
+            If Len(Trim$(vacationName)) > 0 Then
+                With .Borders
+                    .LineStyle = xlContinuous
+                    .Weight = xlMedium
+                    .Color = RGB(0, 0, 0)
+                End With
+            Else
+                '--- Remove borders for empty vacation cells
+                .Borders.LineStyle = xlNone
+            End If
         End With
     End If
 End Sub
