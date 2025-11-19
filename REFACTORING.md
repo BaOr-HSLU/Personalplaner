@@ -88,7 +88,7 @@ Die Control-IDs im Ribbon XML müssen angepasst werden!
 
 ## Namenskonventionen
 
-### ✅ Gut - Neue Namen
+### Gut - Neue Namen
 
 ```vba
 Dim employeeName As String
@@ -97,7 +97,7 @@ Dim weekStartDate As Date
 Dim calendarWeekNumber As Long
 ```
 
-### ❌ Schlecht - Alte Namen (entfernt)
+### Schlecht - Alte Namen (entfernt)
 
 ```vba
 Dim MABName As String
@@ -185,41 +185,116 @@ End Function
 
 ## Testing Checklist
 
-Nach dem Import testen:
-Durchgeführt am 19.11.2025 13:22
+Durchgefuehrt am 19.11.2025 13:22
 
 - [x] Ribbon-Buttons funktionieren alle
-  - Unbekannter Button: BtnShowSettings
-  - Refresh soll nur das aktuelle Blatt neu rechnen um schnell zu bleiben.
+  - **FEHLER**: Unbekannter Button: BtnShowSettings
+  - **TODO**: Refresh soll nur das aktuelle Blatt neu rechnen um schnell zu bleiben
+
 - [x] Kalender erstellen funktioniert
-  - Wenn bereits ein Kalender besteht kommen Fehlermeldungen und die Verbundenen Zellem werden komisch miteinander verbunden.
-  - Die Zellen mit dem Datum sind noch mit falschen Zeichenfolgen beschriftet, nicht mit dem Datum.
-  - Das Listobject welches mit den Mitarbeiter abgefüllt ist soll auf die neu erstellten Tage angepasst werden.
-  - Das Dropdown Menü mit den Absenzcodes fehlt. Bitte ergänzen.
-  - **ZUSATZ**
-    - Ich will die Tage untereinander noch mit einer gestrichelten Linie unterteilen. Nicht nur die Kalenderwochen.
-    - Ich will die Tage in der ausgewählten Zeile als MO, DI, MI, DO, FR formatieren haben "TTT" und die Spalten auf eine Breite von 2.0 erhöhen.
-    - Estelle einen neuen Button um die ausgewählte Kalenderwoche als Wochenrapport zu öffnen oder erstellen.
-    - Ändere das verhalten vom Doppelklick , so dass er auf allen Zellen in dem Listobject funktioniert.
+  - **FEHLER**: Wenn bereits ein Kalender besteht kommen Fehlermeldungen und die verbundenen Zellen werden komisch miteinander verbunden
+  - **FEHLER**: Die Zellen mit dem Datum sind noch mit falschen Zeichenfolgen beschriftet, nicht mit dem Datum
+  - **FEHLER**: Das ListObject welches mit den Mitarbeiter abgefuellt ist soll auf die neu erstellten Tage angepasst werden
+  - **FEHLER**: Das Dropdown-Menue mit den Absencecodes fehlt. Bitte ergaenzen
+  - **ZUSATZ**: Tage untereinander noch mit einer gestrichelten Linie unterteilen (nicht nur die Kalenderwochen)
+  - **ZUSATZ**: Tage in der ausgewaehlten Zeile als MO, DI, MI, DO, FR formatieren ("TTT") und Spaltenbreite auf 2.0 erhoehen
+  - **ZUSATZ**: Neuer Button um die ausgewaehlte Kalenderwoche als Wochenrapport zu oeffnen oder erstellen
+  - **ZUSATZ**: Doppelklick-Verhalten aendern, so dass er auf allen Zellen im ListObject funktioniert
+
 - [x] KW-Blatt erstellen funktioniert
-  - aktualisiere das Ribbon sobald das blatt erstellt wurde.
+  - **TODO**: Ribbon aktualisieren sobald das Blatt erstellt wurde
+
 - [x] Wochenrapporte erstellen funktioniert
-  - Fehler: Blatt 'Projektnummern' nicht gefunden!
-  - die Rapporte werden trotz dem Fehler korrekt erstellt.
+  - **FEHLER**: Blatt 'Projektnummern' nicht gefunden!
+  - **INFO**: Die Rapporte werden trotz dem Fehler korrekt erstellt
+
 - [x] Email-Erinnerungen senden funktioniert
-  - auch hier die codierung beachten! ü wird als Ã¼ angezeigt.
+  - **FEHLER**: Kodierungsproblem - ue wird als falsche Zeichen angezeigt
+
 - [x] Projektauswahl-Form funktioniert
-  - Es lädt die Projekte nicht, wenn ich es über den Ribbon öffne.
+  - **FEHLER**: Es laedt die Projekte nicht, wenn ich es ueber den Ribbon oeffne
+
 - [x] UDFs in Formeln funktionieren (`=GetWorkloadByDate(...)`)
+
 - [x] Filter-Funktionen funktionieren
-- [?] Conditional Formatting wird korrekt angewendet
-  - Nein, sie wird gar nicht angezeigt.
+
+- [x] Conditional Formatting wird korrekt angewendet
+  - **FEHLER**: Nein, sie wird gar nicht angezeigt
+
+## Erkannte Probleme aus Tests
+
+### Kritische Fehler (muessen behoben werden)
+
+1. **CalendarService.bas** - Conditional Formatting wird nicht angezeigt
+   - Problem: ApplyConditionalFormattingToTables wird nicht aufgerufen oder funktioniert nicht
+   - Fix: Pruefen und korrigieren
+
+2. **CalendarService.bas** - Dropdown-Menue mit Absencecodes fehlt
+   - Problem: Data Validation wird nicht erstellt
+   - Fix: AddDataValidationDropdown implementieren/korrigieren
+
+3. **CalendarService.bas** - Datumszellen haben falsche Beschriftung
+   - Problem: Format-String funktioniert nicht korrekt
+   - Fix: Datums-Formatierung korrigieren
+
+4. **CalendarService.bas** - ListObject wird nicht angepasst
+   - Problem: Tabelle wird nicht auf neue Spalten erweitert
+   - Fix: ListObject.Resize implementieren
+
+5. **CalendarService.bas** - Fehlermeldungen bei bestehendem Kalender
+   - Problem: Keine Pruefung ob Kalender bereits existiert
+   - Fix: Bestehende Kalender-Elemente vor Neuerstellen loeschen
+
+6. **WeeklyReportService.bas** - Blatt 'Projektnummern' nicht gefunden
+   - Problem: wsProjekte CodeName wird nicht gefunden
+   - Fix: CodeName pruefen und korrigieren
+
+7. **Email-Kodierung** - Umlaute werden falsch dargestellt
+   - Problem: Email-Body verwendet falsche Zeichenkodierung
+   - Fix: Outlook HTMLBody mit UTF-8 verwenden
+
+8. **UF_Projekte.frm** - Laedt Projekte nicht ueber Ribbon
+   - Problem: LoadProjectData wird nicht aufgerufen oder hat Fehler
+   - Fix: Event-Handler pruefen
+
+9. **RibbonController.bas** - Unbekannter Button BtnShowSettings
+   - Problem: Button existiert nicht oder Control-ID falsch
+   - Fix: Button entfernen oder implementieren
+
+### Verbesserungen / Zusatzfunktionen
+
+10. **CalendarService.bas** - Gestrichelte Linien zwischen Tagen
+    - Zusatz: Borders.LineStyle = xlDot zwischen einzelnen Tagen
+
+11. **CalendarService.bas** - Tage als MO/DI/MI/DO/FR formatieren
+    - Zusatz: Format(datum, "TTT") in Zeile 10
+
+12. **CalendarService.bas** - Spaltenbreite 2.0
+    - Zusatz: .ColumnWidth = 2.0 fuer Datumsspalten
+
+13. **RibbonController.bas** - Neuer Button fuer Wochenrapport
+    - Zusatz: BtnOpenWeeklyReport implementieren
+
+14. **Tabelle3.doccls** - Doppelklick auf allen ListObject-Zellen
+    - Zusatz: Pruefung ob Target in ListObject statt nur MergeCells
+
+15. **WeeklySheetService.bas** - Ribbon nach KW-Blatt-Erstellung aktualisieren
+    - Zusatz: RibbonController.RefreshRibbon aufrufen
+
+16. **RibbonController.bas** - Refresh nur aktuelles Blatt
+    - Zusatz: ActiveSheet.Calculate statt Application.Calculate
 
 ## Bekannte TODOs
 
 ```vba
-'@Todo Implement SendFilteredPDFEmailToAll (in RibbonController.bas)
-'@Todo Add caching for GetUniqueValuesFromRange (in EmployeeService.bas)
+'@Todo Fix: Conditional Formatting wird nicht angezeigt (CalendarService.bas)
+'@Todo Fix: Dropdown-Menue mit Absencecodes fehlt (CalendarService.bas)
+'@Todo Fix: Email-Kodierung fuer Umlaute (WeeklyReportService.bas, EmailService.bas)
+'@Todo Fix: Projektnummern-Blatt nicht gefunden (WeeklyReportService.bas)
+'@Todo Fix: UF_Projekte laedt nicht ueber Ribbon (RibbonController.bas)
+'@Todo Feature: Gestrichelte Linien zwischen Tagen (CalendarService.bas)
+'@Todo Feature: Tage als MO/DI/MI/DO/FR formatieren (CalendarService.bas)
+'@Todo Feature: Button fuer Wochenrapport oeffnen (RibbonController.bas)
 ```
 
 ## Fragen oder Probleme?
