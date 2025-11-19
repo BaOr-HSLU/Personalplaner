@@ -1,40 +1,114 @@
-﻿'@Folder "Personalplaner"
-Public Sub KalenderErstellen()
-    ErstelleKalenderMitArbeitstagen ActiveSheet.Range("O10")
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "Tabelle3"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = True
+'@Folder("Worksheets.MainPlanner")
+'@ModuleDescription("Main personnel planner worksheet (Personalplaner) - manages employee schedules across entire year")
+
+Option Explicit
+
+'--- Constants
+Private Const WEEKLY_INTERVAL As Long = 5  '--- 5 workdays per week (Mon-Fri)
+Private Const CALENDAR_START_CELL As String = "O10"  '--- First date cell in calendar header
+
+'@Description("Creates the yearly calendar with work days (Mon-Fri) starting at O10")
+Public Sub CreateYearlyCalendar()
+    CalendarService.CreateWorkDayCalendar Me.Range(CALENDAR_START_CELL)
 End Sub
 
+'@Description("Initializes filter and project forms when sheet becomes active")
 Private Sub Worksheet_Activate()
-    UF_Filter.LoadData AnfangsspalteVorherigeKW
-    UF_Projekte.LoadData
+    On Error Resume Next
+
+    '--- Load filter data starting from previous week's column
+    Dim previousWeekStartColumn As Long
+    previousWeekStartColumn = WeeklySheetService.FindPreviousWeekStartColumn(Me)
+
+    UF_Filter.LoadFilterData previousWeekStartColumn
+    UF_Projekte.LoadProjectData
 End Sub
 
+'@Description("Creates new KW sheet when user double-clicks a merged calendar week cell")
+'@Param("Target - The double-clicked cell")
+'@Param("Cancel - Set to True to prevent default Excel behavior")
 Private Sub Worksheet_BeforeDoubleClick(ByVal Target As Range, Cancel As Boolean)
+    '--- Only process merged cells (KW headers are merged)
     If Target.MergeCells Then
-        NeuesKWBlattErstellen Target
+        WeeklySheetService.CreateWeeklySheet Target
         Cancel = True
     End If
+
+    '--- Force recalculation after creating new sheet
     Application.Calculate
 End Sub
 
-
+'@Description("Handles recurring weekly entries for School (S) and Part-time (T) absence codes")
+'@Param("Target - The changed cell")
 Private Sub Worksheet_Change(ByVal Target As Range)
-    Dim lo As ListObject
-    Dim i As Long
-    Application.EnableEvents = False
-    If Target.Cells.Count > 1 Then Exit Sub
-    If Target.Value = "S" Or Target.Value = "T" Then
-        If MsgBox("Soll die Schule für jede Woche eingetragen werden?", vbYesNo, "Serientermin Eintragen") = vbYes Then
-            Set lo = Target.ListObject
-            i = 5 ' Start mit 5 Spalten weiter
-            
-            ' Solange innerhalb der Tabelle
-            While Target.Column + i <= lo.Range.Columns.Count + lo.Range.Column - 1
-                Target.offset(0, i).Value = Target.Value
-                i = i + 5
-            Wend
-        End If
-    End If
-    
-    Application.EnableEvents = True
+    On Error GoTo ErrorHandler
 
+    '--- Only process single-cell changes
+    If Target.Cells.Count > 1 Then Exit Sub
+
+    '--- Check if value is School or Part-time code
+    Dim cellValue As String
+    cellValue = CStr(Target.Value)
+
+    If cellValue = "S" Or cellValue = "T" Then
+        Call PromptAndApplyWeeklyRecurrence(Target)
+    End If
+
+    Exit Sub
+
+ErrorHandler:
+    Application.EnableEvents = True
+    MsgBox "Fehler beim Eintragen der Serientermine: " & Err.Description, vbExclamation
+End Sub
+
+'@Description("Prompts user and applies weekly recurring entry (every 5 columns = 1 week)")
+'@Param("startCell - The cell where recurrence starts")
+Private Sub PromptAndApplyWeeklyRecurrence(ByVal startCell As Range)
+    Dim userResponse As VbMsgBoxResult
+    userResponse = MsgBox("Soll die Schule für jede Woche eingetragen werden?", _
+                          vbYesNo, _
+                          "Serientermin Eintragen")
+
+    If userResponse <> vbYes Then Exit Sub
+
+    '--- Disable events to prevent triggering Worksheet_Change recursively
+    Application.EnableEvents = False
+
+    Dim parentTable As ListObject
+    Set parentTable = startCell.ListObject
+
+    If parentTable Is Nothing Then
+        Application.EnableEvents = True
+        Exit Sub
+    End If
+
+    '--- Calculate table boundaries
+    Dim tableLastColumn As Long
+    tableLastColumn = parentTable.Range.Columns.Count + parentTable.Range.Column - 1
+
+    '--- Apply value every WEEKLY_INTERVAL columns (5 days = 1 week)
+    Dim columnOffset As Long
+    columnOffset = WEEKLY_INTERVAL
+
+    Dim targetColumn As Long
+    targetColumn = startCell.Column + columnOffset
+
+    Do While targetColumn <= tableLastColumn
+        startCell.Offset(0, columnOffset).Value = startCell.Value
+
+        columnOffset = columnOffset + WEEKLY_INTERVAL
+        targetColumn = startCell.Column + columnOffset
+    Loop
+
+    '--- Re-enable events
+    Application.EnableEvents = True
 End Sub
