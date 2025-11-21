@@ -1,5 +1,0 @@
-﻿'@Folder "Personalplaner"
-
-Private Sub Worksheet_Activate()
-    UF_Filter.Hide
-End Sub
