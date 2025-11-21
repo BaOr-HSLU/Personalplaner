@@ -182,7 +182,7 @@ Public Sub InitializeFilterListBox( _
     Dim dataTable As ListObject
     Set dataTable = targetSheet.ListObjects(1)
 
-    Dim listBox As MSForms.ListBox
+    Dim listBox As MSForms.listBox
     On Error Resume Next
     Set listBox = targetSheet.OLEObjects(listBoxName).Object
     On Error GoTo 0

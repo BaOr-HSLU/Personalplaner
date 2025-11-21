@@ -16,8 +16,8 @@ Private Sub Worksheet_Change(ByVal Target As Range)
     Application.EnableEvents = False
     
     ' Prüfen und das Format der Eingabe anpassen
-    If Len(Target.Value) = 8 Then
-        Target.Value = Left(Target.Value, 2) & " " & Mid(Target.Value, 3, 3) & " " & Right(Target.Value, 3)
+    If Len(Target.value) = 8 Then
+        Target.value = Left(Target.value, 2) & " " & Mid(Target.value, 3, 3) & " " & Right(Target.value, 3)
     End If
 
 Cleanup:

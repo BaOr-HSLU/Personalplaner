@@ -1,14 +1,14 @@
 ﻿Private Sub Chart_Activate()
     Dim titel                          As String
-    Dim startdate                      As String
-    Dim enddate                        As String
+    Dim startDate                      As String
+    Dim endDate                        As String
     Dim team                           As String
     
-    startdate = CStr(Format(Tabelle8.Range("E4").Value2, "DD.MM.YYYY"))
-    enddate = CStr(Format(Tabelle8.Range("F4").Value2, "DD.MM.YYYY"))
+    startDate = CStr(Format(Tabelle8.Range("E4").Value2, "DD.MM.YYYY"))
+    endDate = CStr(Format(Tabelle8.Range("F4").Value2, "DD.MM.YYYY"))
     team = " " & ListboxToString(Tabelle8, "ListboxTeam")
     
-    titel = "Mitarbeiterauswertung" & team & vbNewLine & "von " & startdate & " bis " & enddate
+    titel = "Mitarbeiterauswertung" & team & vbNewLine & "von " & startDate & " bis " & endDate
     
     With ActiveChart
         .HasTitle = True
@@ -20,7 +20,7 @@
 End Sub
 
 Function ListboxToString(ws As Worksheet, listBoxName As String) As String
-    Dim lb                             As MSForms.Listbox
+    Dim lb                             As MSForms.listBox
     Set lb = ws.OLEObjects(listBoxName).Object
     
     Dim selItems                       As New Collection

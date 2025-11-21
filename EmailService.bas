@@ -38,20 +38,20 @@ Public Sub SendWeeklyPlanPDFToEmployees()
 
     Dim employeeKey As Variant
     Dim employeeLines() As String
-    Dim emailAddress As String
+    Dim EmailAddress As String
 
     For Each employeeKey In uniqueEmployees.Keys
         '--- Parse multi-line employee cell (Name, Phone, Email)
         employeeLines = Split(CStr(employeeKey), vbNewLine)
 
         If UBound(employeeLines) >= 2 Then
-            emailAddress = Trim$(employeeLines(2))
+            EmailAddress = Trim$(employeeLines(2))
 
-            If Len(emailAddress) > 0 And InStr(emailAddress, "@") > 0 Then
+            If Len(EmailAddress) > 0 And InStr(EmailAddress, "@") > 0 Then
                 If emailAddressList <> vbNullString Then
                     emailAddressList = emailAddressList & ";"
                 End If
-                emailAddressList = emailAddressList & emailAddress
+                emailAddressList = emailAddressList & EmailAddress
             End If
         End If
     Next employeeKey
@@ -132,6 +132,6 @@ End Function
 '@Description("Validates email address format")
 '@Param emailAddress The email address to validate
 '@Returns True if valid format
-Private Function IsValidEmailAddress(ByVal emailAddress As String) As Boolean
-    IsValidEmailAddress = (Len(Trim$(emailAddress)) > 0 And InStr(emailAddress, "@") > 0)
+Private Function IsValidEmailAddress(ByVal EmailAddress As String) As Boolean
+    IsValidEmailAddress = (Len(Trim$(EmailAddress)) > 0 And InStr(EmailAddress, "@") > 0)
 End Function

@@ -1,4 +1,4 @@
-'@Folder("Core")
+﻿'@Folder("Core")
 '@ModuleDescription("Workbook event handlers - initialization and sheet activation")
 Option Explicit
 
@@ -29,3 +29,4 @@ Private Sub Workbook_SheetActivate(ByVal activatedSheet As Object)
     '--- Refresh ribbon to update visibility
     RibbonController.RefreshRibbon
 End Sub
+

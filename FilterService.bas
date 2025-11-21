@@ -17,7 +17,7 @@ Public Sub ApplyTableFilter( _
     Dim dataTable As ListObject
     Set dataTable = targetSheet.ListObjects(1) 'First table in sheet
 
-    Dim listBox As MSForms.ListBox
+    Dim listBox As MSForms.listBox
     Set listBox = targetSheet.OLEObjects(listBoxName).Object
 
     '--- Collect selected items from ListBox

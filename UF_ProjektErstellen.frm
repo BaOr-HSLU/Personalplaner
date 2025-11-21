@@ -14,23 +14,24 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
 
+
 Option Explicit
 
 Private Sub CommandButton1_Click()
-    Dim lastrow As Long
+    Dim lastRow As Long
     
-    If Len(Me.TB_BEZ.Value) < 1 Or Len(Me.TB_BEZ.Value) < 1 Or Len(Me.TB_BEZ.Value) < 1 Then
+    If Len(Me.TB_BEZ.value) < 1 Or Len(Me.TB_BEZ.value) < 1 Or Len(Me.TB_BEZ.value) < 1 Then
         If MsgBox("Bist du sicher, dass die Eingaben korrekt sind? Ein oder mehrere Felder sind Leer.", vbYesNo, "Fehlende Eingaben") = vbNo Then Exit Sub
     End If
     
     With wsProjekte
-        lastrow = .UsedRange.Rows.Count
-        .Cells(lastrow + 1, 1).Value = Me.TB_BEZ.Value
-        .Cells(lastrow + 1, 2).Value = Me.TB_KOM.Value
-        .Cells(lastrow + 1, 3).Value = Me.TB_KUN.Value
+        lastRow = .UsedRange.Rows.Count
+        .Cells(lastRow + 1, 1).value = Me.TB_BEZ.value
+        .Cells(lastRow + 1, 2).value = Me.TB_KOM.value
+        .Cells(lastRow + 1, 3).value = Me.TB_KUN.value
     End With
     
-    Me.TB_BEZ.Value = ""
-    Me.TB_KOM.Value = ""
-    Me.TB_KUN.Value = ""
+    Me.TB_BEZ.value = ""
+    Me.TB_KOM.value = ""
+    Me.TB_KUN.value = ""
 End Sub

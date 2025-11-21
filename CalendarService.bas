@@ -91,8 +91,8 @@ Public Sub CreateWorkDayCalendar(ByVal startCell As Range)
             Application.StatusBar = currentYear & " / " & currentMonth & " / " & currentCalendarWeek & " / " & currentDate
 
             '--- Store actual date as value with weekday format (Mo, Di, Mi, Do, Fr)
-            targetSheet.Cells(currentRow, currentColumn).Value = currentDate
-            targetSheet.Cells(currentRow, currentColumn).NumberFormat = "TTT"  '--- German short weekday format
+            targetSheet.Cells(currentRow, currentColumn).value = currentDate
+            targetSheet.Cells(currentRow, currentColumn).NumberFormat = "ddd"  '--- German short weekday format
             targetSheet.Cells(currentRow, currentColumn).HorizontalAlignment = xlCenter
             targetSheet.Cells(currentRow, currentColumn).Font.Bold = True
             targetSheet.Cells(currentRow, currentColumn).Font.Size = 8
@@ -267,17 +267,13 @@ Private Sub FinalizeCalendarWeek(ByVal targetSheet As Worksheet, _
     With targetSheet.Range(targetSheet.Cells(dataRow + CALENDAR_WEEK_ROW_OFFSET, startColumn), _
                            targetSheet.Cells(dataRow + CALENDAR_WEEK_ROW_OFFSET, endColumn))
         .Merge
-        .Value = CStr(weekNumber)
+        .value = CStr(weekNumber)
         .HorizontalAlignment = xlCenter
+        .VerticalAlignment = xlCenter
         .Font.Bold = True
         .Font.Size = 10
         '--- Only set outer borders, not inner vertical lines
         With .Borders(xlEdgeTop)
-            .LineStyle = xlContinuous
-            .Weight = xlMedium
-            .Color = RGB(0, 0, 0)
-        End With
-        With .Borders(xlEdgeBottom)
             .LineStyle = xlContinuous
             .Weight = xlMedium
             .Color = RGB(0, 0, 0)
@@ -298,37 +294,32 @@ Private Sub FinalizeCalendarWeek(ByVal targetSheet As Worksheet, _
     Dim firstDayDate As Date
     Dim lastDayDate As Date
 
-    '--- Get actual dates from the cells in this week
-    '--- Since cells now contain real date values (with "TTT" format), we can read them directly
-    firstDayDate = targetSheet.Cells(dataRow, startColumn).Value
-    lastDayDate = targetSheet.Cells(dataRow, endColumn).Value
+    '--- Get actual dates from a hidden row or calculate from week
+    '--- Since we now display weekday names (MO/DI/etc), we need to store the actual date elsewhere
+    '--- We'll use the row below the weekday names for the numeric date range display
+    firstDayDate = DateSerial(Year(Date), 1, 1) + (weekNumber - 1) * 7
+    Do While Weekday(firstDayDate, vbMonday) > 1
+        firstDayDate = firstDayDate + 1
+    Loop
+    lastDayDate = firstDayDate + 4  ' Monday to Friday
 
     With targetSheet.Range(targetSheet.Cells(dataRow + DATE_ROW_OFFSET, startColumn), _
                            targetSheet.Cells(dataRow + DATE_ROW_OFFSET, endColumn))
         .Merge
-        .Value = Format(firstDayDate, "dd") & "-" & Format(lastDayDate, "dd")
+        .NumberFormat = "@"
+        .value = Format(firstDayDate, "dd") & "-" & Format(lastDayDate, "dd")
         .HorizontalAlignment = xlCenter
         .Font.Bold = False
         .Font.Size = 8
         '--- Only set outer borders, not inner vertical lines
-        With .Borders(xlEdgeTop)
-            .LineStyle = xlContinuous
-            .Weight = xlThin
-            .Color = RGB(0, 0, 0)
-        End With
-        With .Borders(xlEdgeBottom)
-            .LineStyle = xlContinuous
-            .Weight = xlThin
-            .Color = RGB(0, 0, 0)
-        End With
         With .Borders(xlEdgeLeft)
             .LineStyle = xlContinuous
-            .Weight = xlThin
+            .Weight = xlMedium
             .Color = RGB(0, 0, 0)
         End With
         With .Borders(xlEdgeRight)
             .LineStyle = xlContinuous
-            .Weight = xlThin
+            .Weight = xlMedium
             .Color = RGB(0, 0, 0)
         End With
     End With
@@ -345,9 +336,10 @@ Private Sub FinalizeMonth(ByVal targetSheet As Worksheet, _
     With targetSheet.Range(targetSheet.Cells(dataRow + MONTH_ROW_OFFSET, startColumn), _
                            targetSheet.Cells(dataRow + MONTH_ROW_OFFSET, endColumn))
         .Merge
-        .Value = monthName & " " & yearValue
+        .value = monthName & " " & yearValue
         .NumberFormat = "MMMM YYYY"
         .HorizontalAlignment = xlCenter
+        .VerticalAlignment = xlCenter
         .Font.Bold = True
         .Font.Size = 11
         '--- Only set outer borders, not inner vertical lines
@@ -417,9 +409,9 @@ Private Sub MarkVacationPeriod(ByVal targetSheet As Worksheet, _
     Dim vacationStart As Date
     Dim vacationEnd As Date
 
-    vacationName = vacationRow.Range.Cells(1, 1).Value
-    vacationStart = vacationRow.Range.Cells(1, 2).Value
-    vacationEnd = vacationRow.Range.Cells(1, 3).Value
+    vacationName = vacationRow.Range.Cells(1, 1).value
+    vacationStart = vacationRow.Range.Cells(1, 2).value
+    vacationEnd = vacationRow.Range.Cells(1, 3).value
 
     Application.StatusBar = "Ferien / " & vacationName & " von " & vacationStart & " bis " & vacationEnd
 
@@ -434,11 +426,20 @@ Private Sub MarkVacationPeriod(ByVal targetSheet As Worksheet, _
     Dim currentCol As Long
     Dim checkDate As Date
 
-    For currentCol = datesRange.Column To datesRange.Column + datesRange.Columns.Count - 1
-        '--- Calculate the date for this column based on its position
-        '--- This is a workaround since we changed the display format
-        checkDate = GetDateForColumn(targetSheet, datesRowNumber, currentCol)
-
+    '--- Neue Variablen
+    Dim lastCol As Long
+    Dim datesArray As Variant
+    
+    '--- Optimierter Loop
+    lastCol = datesRange.Column + datesRange.Columns.Count - 1
+    
+    ' Werte einmalig in Array laden (massiver Performance-Gewinn!)
+    datesArray = Tabelle3.Range(Tabelle3.Cells(10, datesRange.Column), _
+                                Tabelle3.Cells(10, lastCol)).value
+    
+    For currentCol = datesRange.Column To lastCol
+        checkDate = datesArray(1, currentCol - datesRange.Column + 1)
+        
         If checkDate >= vacationStart And checkDate <= vacationEnd Then
             If firstColumn = 0 Then firstColumn = currentCol
             lastColumn = currentCol
@@ -458,7 +459,7 @@ Private Sub MarkVacationPeriod(ByVal targetSheet As Worksheet, _
 
         With vacationRange
             .Merge
-            .Value = vacationName
+            .value = vacationName
             .Font.Size = 6
             .HorizontalAlignment = xlCenter
             '--- Only add borders if vacation name is not empty
@@ -490,10 +491,10 @@ Private Function GetDateForColumn(ByVal targetSheet As Worksheet, _
     Dim weekCell As Range
 
     '--- Find the calendar week for this column
-    Set weekCell = targetSheet.Cells(dateRow + CALENDAR_WEEK_ROW_OFFSET, columnIndex)
+    Set weekCell = targetSheet.Cells(dateRow + CALENDAR_WEEK_ROW_OFFSET, columnIndex).MergeArea.Resize(1, 1)
 
-    If IsNumeric(weekCell.Value) Then
-        weekNumber = CLng(weekCell.Value)
+    If IsNumeric(weekCell.value) Then
+        weekNumber = CLng(weekCell.value)
 
         '--- Calculate base date from week number
         Dim baseDate As Date
@@ -508,7 +509,7 @@ Private Function GetDateForColumn(ByVal targetSheet As Worksheet, _
         '--- Find which day of the week this column represents
         '--- by looking at the weekday name
         Dim weekdayName As String
-        weekdayName = targetSheet.Cells(dateRow, columnIndex).Value
+        weekdayName = targetSheet.Cells(dateRow, columnIndex).value
 
         Select Case UCase(weekdayName)
             Case "MO", "MON"
@@ -539,8 +540,8 @@ Private Sub MarkHoliday(ByVal targetSheet As Worksheet, _
     Dim holidayName As String
     Dim holidayDate As Date
 
-    holidayName = holidayRow.Range.Cells(1, 1).Value
-    holidayDate = holidayRow.Range.Cells(1, 2).Value
+    holidayName = holidayRow.Range.Cells(1, 1).value
+    holidayDate = holidayRow.Range.Cells(1, 2).value
 
     Application.StatusBar = "Feiertag / " & holidayName & " " & holidayDate
 
@@ -569,7 +570,7 @@ Private Sub MarkHoliday(ByVal targetSheet As Worksheet, _
 
         '--- Add holiday name
         With targetSheet.Cells(datesRowNumber - 8, foundColumn)
-            .Value = holidayName
+            .value = holidayName
             .Interior.Pattern = xlSolid
             .Interior.ColorIndex = 33
         End With
@@ -675,7 +676,16 @@ Public Sub ApplyDataValidationToTables(Optional ByVal startColumnIndex As Long =
         MsgBox "Keine gueltigen Zellen ab Spalte " & startColumnIndex & " gefunden.", vbExclamation
         Exit Sub
     End If
-
+    
+    '--- Change formating of cells in the calendar
+    With targetRange
+        .Font.Size = 6
+        .Font.Name = "Arial"
+        .HorizontalAlignment = xlLeft
+        .VerticalAlignment = xlCenter
+    End With
+    
+    
     '--- Clear existing validation
     On Error Resume Next
     targetRange.Validation.Delete

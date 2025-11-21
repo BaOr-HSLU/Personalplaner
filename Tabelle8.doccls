@@ -1,4 +1,4 @@
-'@Folder("Worksheets.EmployeeAnalysis")
+﻿'@Folder("Worksheets.EmployeeAnalysis")
 '@ModuleDescription("Employee analysis worksheet (Auswertung Mitarbeiter) - provides filtered workload statistics and dashboards")
 
 Option Explicit
@@ -67,7 +67,7 @@ Public Sub PopulateEmployeeEvaluation()
 
     '--- Read employee names from column 7 (0-based offset = 6)
     Dim employeeNameRange As Range
-    Set employeeNameRange = mainPlannerTable.DataBodyRange.Columns(1).Offset(0, EMPLOYEE_NAME_COLUMN_OFFSET)
+    Set employeeNameRange = mainPlannerTable.DataBodyRange.Columns(1).offset(0, EMPLOYEE_NAME_COLUMN_OFFSET)
 
     '--- PERFORMANCE: Read entire range into array
     Dim employeeNamesArray As Variant
@@ -84,7 +84,7 @@ Public Sub PopulateEmployeeEvaluation()
 
         '--- Only add non-empty employee names
         If Len(employeeName) > 0 Then
-            evaluationTable.ListRows.Add.Range(1, 2).Value = employeeName
+            evaluationTable.ListRows.Add.Range(1, 2).value = employeeName
         End If
     Next rowIndex
 

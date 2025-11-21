@@ -1,4 +1,4 @@
-'@Folder("Worksheets.MainPlanner")
+﻿'@Folder("Worksheets.MainPlanner")
 '@ModuleDescription("Main personnel planner worksheet (Personalplaner) - manages employee schedules across entire year")
 
 Option Explicit
@@ -66,7 +66,7 @@ Private Sub Worksheet_BeforeDoubleClick(ByVal Target As Range, Cancel As Boolean
         End If
 
         '--- Only create sheet if we found a valid KW header
-        If kwHeaderCell.MergeCells And Not IsEmpty(kwHeaderCell.Value) Then
+        If kwHeaderCell.MergeCells And Not IsEmpty(kwHeaderCell.value) Then
             WeeklySheetService.CreateWeeklySheet kwHeaderCell
             Cancel = True
         End If
@@ -92,7 +92,7 @@ Private Sub Worksheet_Change(ByVal Target As Range)
 
     '--- Check if value is School or Part-time code
     Dim cellValue As String
-    cellValue = CStr(Target.Value)
+    cellValue = CStr(Target.value)
 
     If cellValue = "S" Or cellValue = "T" Then
         Call PromptAndApplyWeeklyRecurrence(Target)
@@ -138,7 +138,7 @@ Private Sub PromptAndApplyWeeklyRecurrence(ByVal startCell As Range)
     targetColumn = startCell.Column + columnOffset
 
     Do While targetColumn <= tableLastColumn
-        startCell.Offset(0, columnOffset).Value = startCell.Value
+        startCell.offset(0, columnOffset).value = startCell.value
 
         columnOffset = columnOffset + WEEKLY_INTERVAL
         targetColumn = startCell.Column + columnOffset
@@ -147,3 +147,4 @@ Private Sub PromptAndApplyWeeklyRecurrence(ByVal startCell As Range)
     '--- Re-enable events
     Application.EnableEvents = True
 End Sub
+

@@ -12,7 +12,7 @@ Attribute VB_Exposed = False
 Option Explicit
 
 Private Type TProject
-    ProjectName As String
+    projectName As String
     CommissionNumber As String
     Remarks As String
 End Type
@@ -20,12 +20,12 @@ End Type
 Private this As TProject
 
 '@Description("Gets or sets the project name")
-Public Property Get ProjectName() As String
-    ProjectName = this.ProjectName
+Public Property Get projectName() As String
+    projectName = this.projectName
 End Property
 
-Public Property Let ProjectName(ByVal value As String)
-    this.ProjectName = value
+Public Property Let projectName(ByVal value As String)
+    this.projectName = value
 End Property
 
 '@Description("Gets or sets the commission number (Kommissionsnummer)")
@@ -62,5 +62,5 @@ End Sub
 
 '@Description("Validates if project has minimum required data")
 Public Function IsValid() As Boolean
-    IsValid = (Len(Trim$(this.ProjectName)) > 0)
+    IsValid = (Len(Trim$(this.projectName)) > 0)
 End Function

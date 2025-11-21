@@ -33,7 +33,7 @@ Public Function LoadProject(ByVal projectName As String) As Project
     Dim proj As Project
     Set proj = New Project
 
-    proj.ProjectName = projectName
+    proj.projectName = projectName
     proj.CommissionNumber = projectSheet.Cells(foundCell.Row, 2).value
     proj.Remarks = projectSheet.Cells(foundCell.Row, 3).value
 
@@ -65,7 +65,7 @@ Public Function SaveProject(ByVal proj As Project) As Boolean
 
     '--- Check if project already exists
     Dim foundCell As Range
-    Set foundCell = projectSheet.UsedRange.Resize(, 1).Find(proj.ProjectName)
+    Set foundCell = projectSheet.UsedRange.Resize(, 1).Find(proj.projectName)
 
     Dim targetRow As Long
 
@@ -78,7 +78,7 @@ Public Function SaveProject(ByVal proj As Project) As Boolean
     End If
 
     '--- Write project data
-    projectSheet.Cells(targetRow, 1).value = proj.ProjectName
+    projectSheet.Cells(targetRow, 1).value = proj.projectName
     projectSheet.Cells(targetRow, 2).value = proj.CommissionNumber
     projectSheet.Cells(targetRow, 3).value = proj.Remarks
 
@@ -96,7 +96,7 @@ Public Function PromptForProjectDetails(ByVal projectName As String) As Project
     '@Ignore EmptyStringLiteral
     Dim proj As Project
     Set proj = New Project
-    proj.ProjectName = projectName
+    proj.projectName = projectName
 
     '--- Check if project exists, offer to load
     Dim existingProject As Project
@@ -107,7 +107,7 @@ Public Function PromptForProjectDetails(ByVal projectName As String) As Project
         Dim useExisting As VbMsgBoxResult
         useExisting = MsgBox( _
             "Sollen die Projektdaten geladen werden?" & vbNewLine & vbNewLine & _
-            "Projekt: " & existingProject.ProjectName & vbNewLine & _
+            "Projekt: " & existingProject.projectName & vbNewLine & _
             "Kommission: " & existingProject.CommissionNumber & vbNewLine & _
             "Bemerkung: " & existingProject.Remarks, _
             vbYesNo + vbQuestion, "Daten laden")
@@ -153,7 +153,7 @@ PromptInputs:
     Dim confirmSave As VbMsgBoxResult
     confirmSave = MsgBox( _
         "Soll das Projekt gespeichert werden?" & vbNewLine & vbNewLine & _
-        "Projekt: " & proj.ProjectName & vbNewLine & _
+        "Projekt: " & proj.projectName & vbNewLine & _
         "Kommission: " & proj.CommissionNumber & vbNewLine & _
         "Bemerkung: " & proj.Remarks, _
         vbYesNo + vbQuestion, "Projekt speichern?")
@@ -229,12 +229,12 @@ Public Function LoadAllProjects() As Dictionary
 
     For rowIndex = 2 To lastRow
         Set proj = New Project
-        proj.ProjectName = projectSheet.Cells(rowIndex, 1).value
+        proj.projectName = projectSheet.Cells(rowIndex, 1).value
         proj.CommissionNumber = projectSheet.Cells(rowIndex, 2).value
         proj.Remarks = projectSheet.Cells(rowIndex, 3).value
 
-        If proj.IsValid And Not projectDict.Exists(proj.ProjectName) Then
-            projectDict.Add proj.ProjectName, proj
+        If proj.IsValid And Not projectDict.Exists(proj.projectName) Then
+            projectDict.Add proj.projectName, proj
         End If
     Next rowIndex
 

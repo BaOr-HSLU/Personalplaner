@@ -69,7 +69,7 @@ End Sub
 
 '@Description("Callback: Controls visibility based on active sheet")
 'NOTE: CUSTOMUI XML CALLBACK: getVisible="GetControlVisibility"
-Public Sub GetControlVisibility(ByVal control As IRibbonControl, ByRef returnedVal As Boolean)
+Public Sub GetControlVisibility(ByVal control, ByRef returnedVal)
     Select Case control.id
         Case "TabDashboard"
             'NOTE: CUSTOMUI XML: control id="TabDashboard"
@@ -275,7 +275,7 @@ Private Sub OpenCurrentWeeklyPlan()
     End If
 
     '--- Verify we have a valid KW header
-    If Not kwHeaderCell.MergeCells Or IsEmpty(kwHeaderCell.Value) Then
+    If Not kwHeaderCell.MergeCells Or IsEmpty(kwHeaderCell.value) Then
         MsgBox "Kalenderwoche konnte nicht ermittelt werden.", vbExclamation, "KW nicht gefunden"
         Exit Sub
     End If
