@@ -10,6 +10,9 @@ Private Const MONTH_ROW_OFFSET As Long = -3
 Private Const HOLIDAYS_ROW_OFFSET As Long = -5
 Private Const VACATIONS_ROW_OFFSET As Long = -4
 
+'--- Color constant for holidays and vacations (light blue)
+Private Const HOLIDAY_VACATION_COLOR As Long = 15849925  ' RGB(165, 205, 241)
+
 '@Description("Creates a calendar with work days only (Monday-Friday)")
 '@Param startCell The cell where the calendar should start
 Public Sub CreateWorkDayCalendar(ByVal startCell As Range)
@@ -21,17 +24,32 @@ Public Sub CreateWorkDayCalendar(ByVal startCell As Range)
     Dim targetSheet As Worksheet
     Set targetSheet = ActiveSheet
 
-    '--- Get date range from user
-    Dim startDate As Date
-    Dim endDate As Date
+    '--- Show UserForm to get options
+    Dim optionsForm As UF_CalendarOptions
+    Set optionsForm = New UF_CalendarOptions
 
-    startDate = Application.InputBox("Startdatum eingeben (z.B. 01.01.2025):", "Startdatum", Date, , , , , 1)
-    endDate = Application.InputBox("Enddatum eingeben (z.B. 31.12.2025):", "Enddatum", Date + 30, , , , , 1)
+    optionsForm.Show
 
-    If endDate < startDate Then
-        MsgBox "Enddatum muss nach dem Startdatum liegen!", vbExclamation
+    '--- Check if user cancelled
+    If optionsForm.IsCancelled Then
+        Unload optionsForm
         Exit Sub
     End If
+
+    '--- Get values from form
+    Dim startDate As Date
+    Dim endDate As Date
+    Dim includeHolidaysVacations As Boolean
+    Dim applyConditionalFormatting As Boolean
+    Dim copyFormattingFromA2 As Boolean
+
+    startDate = optionsForm.StartDate
+    endDate = optionsForm.EndDate
+    includeHolidaysVacations = optionsForm.IncludeHolidaysVacations
+    applyConditionalFormatting = optionsForm.ApplyConditionalFormatting
+    copyFormattingFromA2 = optionsForm.CopyFormattingFromA2
+
+    Unload optionsForm
 
     '--- FIX #5: Clear existing calendar elements before creating new one
     Call ClearExistingCalendar(targetSheet, startCell)
@@ -180,17 +198,20 @@ Public Sub CreateWorkDayCalendar(ByVal startCell As Range)
 
     MsgBox "Kalender mit Arbeitstagen erfolgreich erstellt!", vbInformation
 
-    '--- Ask if holidays should be added
-    Dim addHolidays As VbMsgBoxResult
-    addHolidays = MsgBox("Sollen die Feiertage auch eingetragen werden?", vbYesNo, "Feiertage eintragen")
-
-    If addHolidays = vbYes Then
+    '--- Apply options from UserForm
+    If includeHolidaysVacations Then
         Call AddHolidaysAndVacations
     End If
 
-    '--- FIX #1 & #2: Apply conditional formatting AND data validation dropdowns
-    Call ApplyConditionalFormattingToTables
-    Call ApplyDataValidationToTables
+    If copyFormattingFromA2 Then
+        Call CopyConditionalFormattingFromA2ToWeekCells(targetSheet, startCell)
+    End If
+
+    If applyConditionalFormatting Then
+        '--- FIX #1 & #2: Apply conditional formatting AND data validation dropdowns
+        Call ApplyConditionalFormattingToTables
+        Call ApplyDataValidationToTables
+    End If
 
     '--- FIX: Stay on Personalplaner instead of switching to Tabelle1
     Tabelle3.Activate
@@ -323,6 +344,74 @@ Private Sub FinalizeCalendarWeek(ByVal targetSheet As Worksheet, _
             .Color = RGB(0, 0, 0)
         End With
     End With
+End Sub
+
+'@Description("Copies conditional formatting from cell A2 to all calendar week cells")
+'@Param targetSheet The worksheet containing the calendar
+'@Param startCell The cell where the calendar starts
+Private Sub CopyConditionalFormattingFromA2ToWeekCells(ByVal targetSheet As Worksheet, ByVal startCell As Range)
+    On Error Resume Next
+
+    Dim sourceCell As Range
+    Set sourceCell = targetSheet.Range("A2")
+
+    '--- Check if source cell has conditional formatting
+    If sourceCell.FormatConditions.Count = 0 Then
+        MsgBox "Zelle A2 hat keine bedingte Formatierung zum Kopieren.", vbInformation
+        Exit Sub
+    End If
+
+    '--- Find all week cells in the calendar
+    Dim datesRange As Range
+    Set datesRange = targetSheet.Range("TAGE")
+
+    If datesRange Is Nothing Then
+        MsgBox "Kalender-Bereich 'TAGE' wurde nicht gefunden.", vbExclamation
+        Exit Sub
+    End If
+
+    Dim weekRow As Long
+    weekRow = datesRange.Row + CALENDAR_WEEK_ROW_OFFSET
+
+    Dim firstColumn As Long
+    Dim lastColumn As Long
+    firstColumn = datesRange.Column
+    lastColumn = datesRange.Column + datesRange.Columns.Count - 1
+
+    Application.ScreenUpdating = False
+
+    '--- Process each merged cell in the week row
+    Dim currentColumn As Long
+    currentColumn = firstColumn
+
+    Do While currentColumn <= lastColumn
+        Dim weekCell As Range
+        Set weekCell = targetSheet.Cells(weekRow, currentColumn)
+
+        '--- If it's a merged cell, process the entire merge area
+        If weekCell.MergeCells Then
+            Dim weekCellArea As Range
+            Set weekCellArea = weekCell.MergeArea
+
+            '--- Clear existing conditional formatting
+            weekCellArea.FormatConditions.Delete
+
+            '--- Copy conditional formatting from A2
+            sourceCell.Copy
+            weekCellArea.PasteSpecial Paste:=xlPasteFormats
+            Application.CutCopyMode = False
+
+            '--- Move to next week (skip merged cells)
+            currentColumn = weekCellArea.Column + weekCellArea.Columns.Count
+        Else
+            currentColumn = currentColumn + 1
+        End If
+    Loop
+
+    Application.ScreenUpdating = True
+    Application.StatusBar = "Bedingte Formatierung von A2 auf KW-Zellen kopiert."
+
+    On Error GoTo 0
 End Sub
 
 '@Description("Finalizes a month by merging cells and adding borders")
@@ -462,6 +551,9 @@ Private Sub MarkVacationPeriod(ByVal targetSheet As Worksheet, _
             .value = vacationName
             .Font.Size = 6
             .HorizontalAlignment = xlCenter
+            '--- Add background color
+            .Interior.Pattern = xlSolid
+            .Interior.Color = HOLIDAY_VACATION_COLOR
             '--- Only add borders if vacation name is not empty
             If Len(Trim$(vacationName)) > 0 Then
                 With .Borders
@@ -565,14 +657,14 @@ Private Sub MarkHoliday(ByVal targetSheet As Worksheet, _
         With targetSheet.Range(targetSheet.Cells(datesRowNumber, foundColumn), _
                                targetSheet.Cells(datesRowNumber + EMPLOYEE_ROWS_COUNT, foundColumn)).Interior
             .Pattern = xlSolid
-            .ColorIndex = 33
+            .Color = HOLIDAY_VACATION_COLOR
         End With
 
         '--- Add holiday name
         With targetSheet.Cells(datesRowNumber - 8, foundColumn)
             .value = holidayName
             .Interior.Pattern = xlSolid
-            .Interior.ColorIndex = 33
+            .Interior.Color = HOLIDAY_VACATION_COLOR
         End With
     Else
         Debug.Print "Feiertag NICHT gefunden", holidayName, holidayDate
