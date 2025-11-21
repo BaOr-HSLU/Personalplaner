@@ -1,0 +1,32 @@
+﻿'@Folder "PDFs"
+Option Explicit
+
+Private Sub Worksheet_Change(ByVal Target As Range)
+    Dim interrng As Range
+    On Error GoTo ErrorHandler ' Fehlerbehandlung
+    
+    ' Definiere den Bereich, auf den die Änderung angewendet wird
+    Set interrng = Me.Range("B4:B21")
+    
+    ' Prüfen, ob die Änderung innerhalb des interessierenden Bereichs liegt
+    If Intersect(Target, interrng) Is Nothing Then Exit Sub
+    If Target.Cells.Count > 1 Then Exit Sub
+    
+    ' Ereignisse deaktivieren, um rekursive Schleifen zu vermeiden
+    Application.EnableEvents = False
+    
+    ' Prüfen und das Format der Eingabe anpassen
+    If Len(Target.value) = 8 Then
+        Target.value = Left(Target.value, 2) & " " & Mid(Target.value, 3, 3) & " " & Right(Target.value, 3)
+    End If
+
+Cleanup:
+    ' Ereignisse wieder aktivieren
+    Application.EnableEvents = True
+    Exit Sub
+
+ErrorHandler:
+    ' Fehlerbehandlung
+    MsgBox "Ein Fehler ist aufgetreten: " & Err.Description, vbExclamation
+    Resume Cleanup
+End Sub

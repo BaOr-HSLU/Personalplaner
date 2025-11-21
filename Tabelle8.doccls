@@ -1,0 +1,115 @@
+﻿'@Folder("Worksheets.EmployeeAnalysis")
+'@ModuleDescription("Employee analysis worksheet (Auswertung Mitarbeiter) - provides filtered workload statistics and dashboards")
+
+Option Explicit
+
+'--- Constants
+Private Const MAIN_PLANNER_TABLE_NAME As String = "tblAL"
+Private Const EVALUATION_TABLE_NAME As String = "tblAuswertung"
+Private Const EMPLOYEE_NAME_COLUMN_OFFSET As Long = 6  '--- Column 7 in table (0-based offset = 6)
+
+'@Description("Filters evaluation table by selected Funktion values in ListBox")
+Private Sub ListBoxFunktion_Change()
+    FilterService.ApplyTableFilter Me, "ListBoxFunktion", "Funktion"
+    Application.Calculate
+End Sub
+
+'@Description("Filters evaluation table by selected Mitarbeiter values in ListBox")
+Private Sub ListBoxMitarbeiter_Change()
+    FilterService.ApplyTableFilter Me, "ListBoxMitarbeiter", "Mitarbeiter"
+    Application.Calculate
+End Sub
+
+'@Description("Filters evaluation table by selected Team values in ListBox")
+Private Sub ListBoxTeam_Change()
+    FilterService.ApplyTableFilter Me, "ListBoxTeam", "Team"
+    Application.Calculate
+End Sub
+
+'@Description("Populates evaluation table with employee data from main planner and initializes filter ListBoxes")
+'@Remarks("Reads employee names from column 7 of main planner table (tblAL) and creates evaluation rows")
+Public Sub PopulateEmployeeEvaluation()
+    On Error GoTo ErrorHandler
+
+    '--- Store original application state
+    Dim originalScreenUpdating As Boolean
+    Dim originalCalculation As XlCalculation
+    Dim originalEnableEvents As Boolean
+    Dim originalDisplayAlerts As Boolean
+
+    originalScreenUpdating = Application.ScreenUpdating
+    originalCalculation = Application.Calculation
+    originalEnableEvents = Application.EnableEvents
+    originalDisplayAlerts = Application.DisplayAlerts
+
+    '--- PERFORMANCE: Disable UI updates for 200+ employees
+    Application.ScreenUpdating = False
+    Application.Calculation = xlCalculationManual
+    Application.EnableEvents = False
+    Application.DisplayAlerts = False
+    Application.StatusBar = "Auswertung gestartet"
+
+    '--- Reference main planner table
+    Dim mainPlannerTable As ListObject
+    Set mainPlannerTable = Tabelle3.ListObjects(MAIN_PLANNER_TABLE_NAME)
+
+    Dim employeeCount As Long
+    employeeCount = mainPlannerTable.ListRows.Count
+
+    '--- Reference evaluation table
+    Dim evaluationTable As ListObject
+    Set evaluationTable = Me.ListObjects(EVALUATION_TABLE_NAME)
+
+    '--- Clear existing evaluation data
+    If evaluationTable.ListRows.Count > 0 Then
+        evaluationTable.DataBodyRange.Delete
+    End If
+
+    '--- Read employee names from column 7 (0-based offset = 6)
+    Dim employeeNameRange As Range
+    Set employeeNameRange = mainPlannerTable.DataBodyRange.Columns(1).offset(0, EMPLOYEE_NAME_COLUMN_OFFSET)
+
+    '--- PERFORMANCE: Read entire range into array
+    Dim employeeNamesArray As Variant
+    employeeNamesArray = employeeNameRange.Value2
+
+    '--- Process each employee and add to evaluation table
+    Dim rowIndex As Long
+    Dim employeeName As String
+
+    For rowIndex = LBound(employeeNamesArray, 1) To UBound(employeeNamesArray, 1)
+        Application.StatusBar = "Auswertung " & rowIndex & " von " & employeeCount
+
+        employeeName = Trim$(CStr(employeeNamesArray(rowIndex, 1)))
+
+        '--- Only add non-empty employee names
+        If Len(employeeName) > 0 Then
+            evaluationTable.ListRows.Add.Range(1, 2).value = employeeName
+        End If
+    Next rowIndex
+
+    '--- Recalculate to populate formulas in evaluation table
+    Application.Calculate
+
+    '--- Initialize filter ListBoxes with unique values
+    WeeklySheetService.InitializeFilterListBox Me, "ListBoxMitarbeiter", "Mitarbeiter"
+    WeeklySheetService.InitializeFilterListBox Me, "ListBoxFunktion", "Funktion"
+    WeeklySheetService.InitializeFilterListBox Me, "ListBoxTeam", "Team"
+
+CleanupAndExit:
+    '--- Restore application state
+    Application.StatusBar = False
+    Application.EnableEvents = originalEnableEvents
+    Application.DisplayAlerts = originalDisplayAlerts
+    Application.ScreenUpdating = originalScreenUpdating
+    Application.Calculation = originalCalculation
+
+    '--- Final recalculation to ensure all formulas are current
+    Me.Calculate
+
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "Fehler beim Laden der Mitarbeiter: " & Err.Description, vbCritical, "Fehler"
+    Resume CleanupAndExit
+End Sub
