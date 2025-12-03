@@ -551,25 +551,58 @@ Private Sub MarkVacationPeriod(ByVal targetSheet As Worksheet, _
 
     Application.StatusBar = "Ferien / " & vacationName & " von " & vacationStart & " bis " & vacationEnd
 
-    '--- Find start and end columns using .Find (MUCH faster than loop)
+    '--- Find start and end columns using .Find with multiple strategies
     Dim startCell As Range
     Dim endCell As Range
 
-    '--- Find vacation start date
-    Set startCell = datesRange.Find(What:=CLng(vacationStart), _
+    '--- Strategy 1: Try finding with Date value directly
+    Set startCell = datesRange.Find(What:=vacationStart, _
                                     LookIn:=xlValues, _
                                     LookAt:=xlWhole, _
                                     SearchOrder:=xlByColumns, _
                                     SearchDirection:=xlNext, _
                                     MatchCase:=False)
 
-    '--- Find vacation end date
-    Set endCell = datesRange.Find(What:=CLng(vacationEnd), _
+    Set endCell = datesRange.Find(What:=vacationEnd, _
                                   LookIn:=xlValues, _
                                   LookAt:=xlWhole, _
                                   SearchOrder:=xlByColumns, _
                                   SearchDirection:=xlNext, _
                                   MatchCase:=False)
+
+    '--- Strategy 2: If not found, try with CLng (integer date)
+    If startCell Is Nothing Then
+        Set startCell = datesRange.Find(What:=CLng(vacationStart), _
+                                        LookIn:=xlValues, _
+                                        LookAt:=xlWhole)
+    End If
+
+    If endCell Is Nothing Then
+        Set endCell = datesRange.Find(What:=CLng(vacationEnd), _
+                                      LookIn:=xlValues, _
+                                      LookAt:=xlWhole)
+    End If
+
+    '--- Strategy 3: If still not found, loop through manually
+    If startCell Is Nothing Or endCell Is Nothing Then
+        Dim currentCol As Long
+        Dim cellValue As Variant
+
+        For currentCol = datesRange.Column To datesRange.Column + datesRange.Columns.Count - 1
+            cellValue = targetSheet.Cells(datesRowNumber, currentCol).value
+
+            '--- Check if it's a date and matches
+            If IsDate(cellValue) Then
+                If CLng(CDate(cellValue)) = CLng(vacationStart) And startCell Is Nothing Then
+                    Set startCell = targetSheet.Cells(datesRowNumber, currentCol)
+                End If
+                If CLng(CDate(cellValue)) = CLng(vacationEnd) And endCell Is Nothing Then
+                    Set endCell = targetSheet.Cells(datesRowNumber, currentCol)
+                End If
+                If Not startCell Is Nothing And Not endCell Is Nothing Then Exit For
+            End If
+        Next currentCol
+    End If
 
     '--- Mark vacation period if both dates found
     If Not startCell Is Nothing And Not endCell Is Nothing Then
@@ -674,14 +707,41 @@ Private Sub MarkHoliday(ByVal targetSheet As Worksheet, _
 
     Application.StatusBar = "Feiertag / " & holidayName & " " & holidayDate
 
-    '--- Find date using .Find (MUCH faster than loop)
+    '--- Find date using .Find with multiple strategies
     Dim foundCell As Range
-    Set foundCell = datesRange.Find(What:=CLng(holidayDate), _
+
+    '--- Strategy 1: Try finding with Date value directly
+    Set foundCell = datesRange.Find(What:=holidayDate, _
                                     LookIn:=xlValues, _
                                     LookAt:=xlWhole, _
                                     SearchOrder:=xlByColumns, _
                                     SearchDirection:=xlNext, _
                                     MatchCase:=False)
+
+    '--- Strategy 2: If not found, try with CLng (integer date)
+    If foundCell Is Nothing Then
+        Set foundCell = datesRange.Find(What:=CLng(holidayDate), _
+                                        LookIn:=xlValues, _
+                                        LookAt:=xlWhole)
+    End If
+
+    '--- Strategy 3: If still not found, loop through manually
+    If foundCell Is Nothing Then
+        Dim currentCol As Long
+        Dim cellValue As Variant
+
+        For currentCol = datesRange.Column To datesRange.Column + datesRange.Columns.Count - 1
+            cellValue = targetSheet.Cells(datesRowNumber, currentCol).value
+
+            '--- Check if it's a date and matches
+            If IsDate(cellValue) Then
+                If CLng(CDate(cellValue)) = CLng(holidayDate) Then
+                    Set foundCell = targetSheet.Cells(datesRowNumber, currentCol)
+                    Exit For
+                End If
+            End If
+        Next currentCol
+    End If
 
     If Not foundCell Is Nothing Then
         Dim foundColumn As Long
