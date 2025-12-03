@@ -551,66 +551,48 @@ Private Sub MarkVacationPeriod(ByVal targetSheet As Worksheet, _
 
     Application.StatusBar = "Ferien / " & vacationName & " von " & vacationStart & " bis " & vacationEnd
 
-    '--- Find start and end columns using .Find with multiple strategies
-    Dim startCell As Range
-    Dim endCell As Range
+    '--- Adjust dates if they fall on weekends (calendar only has Mon-Fri)
+    '--- Move start to next Monday if it's a weekend
+    Do While Weekday(vacationStart, vbMonday) > 5
+        vacationStart = vacationStart + 1
+    Loop
 
-    '--- Strategy 1: Try finding with Date value directly
-    Set startCell = datesRange.Find(What:=vacationStart, _
-                                    LookIn:=xlValues, _
-                                    LookAt:=xlWhole, _
-                                    SearchOrder:=xlByColumns, _
-                                    SearchDirection:=xlNext, _
-                                    MatchCase:=False)
+    '--- Move end to previous Friday if it's a weekend
+    Do While Weekday(vacationEnd, vbMonday) > 5
+        vacationEnd = vacationEnd - 1
+    Loop
 
-    Set endCell = datesRange.Find(What:=vacationEnd, _
-                                  LookIn:=xlValues, _
-                                  LookAt:=xlWhole, _
-                                  SearchOrder:=xlByColumns, _
-                                  SearchDirection:=xlNext, _
-                                  MatchCase:=False)
+    Debug.Print "Ferien suchen:", vacationName, "von", vacationStart, "bis", vacationEnd
 
-    '--- Strategy 2: If not found, try with CLng (integer date)
-    If startCell Is Nothing Then
-        Set startCell = datesRange.Find(What:=CLng(vacationStart), _
-                                        LookIn:=xlValues, _
-                                        LookAt:=xlWhole)
-    End If
+    '--- Find first and last columns in vacation period by looping through dates
+    Dim firstColumn As Long
+    Dim lastColumn As Long
+    firstColumn = 0
+    lastColumn = 0
 
-    If endCell Is Nothing Then
-        Set endCell = datesRange.Find(What:=CLng(vacationEnd), _
-                                      LookIn:=xlValues, _
-                                      LookAt:=xlWhole)
-    End If
+    Dim currentCol As Long
+    Dim cellValue As Variant
+    Dim cellDate As Date
 
-    '--- Strategy 3: If still not found, loop through manually
-    If startCell Is Nothing Or endCell Is Nothing Then
-        Dim currentCol As Long
-        Dim cellValue As Variant
+    For currentCol = datesRange.Column To datesRange.Column + datesRange.Columns.Count - 1
+        cellValue = targetSheet.Cells(datesRowNumber, currentCol).value
 
-        For currentCol = datesRange.Column To datesRange.Column + datesRange.Columns.Count - 1
-            cellValue = targetSheet.Cells(datesRowNumber, currentCol).value
+        '--- Check if it's a date
+        If IsDate(cellValue) Then
+            cellDate = CDate(cellValue)
 
-            '--- Check if it's a date and matches
-            If IsDate(cellValue) Then
-                If CLng(CDate(cellValue)) = CLng(vacationStart) And startCell Is Nothing Then
-                    Set startCell = targetSheet.Cells(datesRowNumber, currentCol)
-                End If
-                If CLng(CDate(cellValue)) = CLng(vacationEnd) And endCell Is Nothing Then
-                    Set endCell = targetSheet.Cells(datesRowNumber, currentCol)
-                End If
-                If Not startCell Is Nothing And Not endCell Is Nothing Then Exit For
+            '--- Check if this date falls within vacation period
+            If cellDate >= vacationStart And cellDate <= vacationEnd Then
+                If firstColumn = 0 Then firstColumn = currentCol
+                lastColumn = currentCol
             End If
-        Next currentCol
-    End If
+        End If
+    Next currentCol
 
-    '--- Mark vacation period if both dates found
-    If Not startCell Is Nothing And Not endCell Is Nothing Then
-        Dim firstColumn As Long
-        Dim lastColumn As Long
-        firstColumn = startCell.Column
-        lastColumn = endCell.Column
+    Debug.Print "Gefunden: firstColumn=", firstColumn, "lastColumn=", lastColumn
 
+    '--- Mark vacation period if dates found
+    If firstColumn > 0 And lastColumn >= firstColumn Then
         '--- FIX: Unmerge existing cells first to avoid conflicts
         Dim vacationRange As Range
         Set vacationRange = targetSheet.Range(targetSheet.Cells(datesRowNumber - 4, firstColumn), _
@@ -640,8 +622,9 @@ Private Sub MarkVacationPeriod(ByVal targetSheet As Worksheet, _
                 .Borders.LineStyle = xlNone
             End If
         End With
+        Debug.Print "Ferien markiert:", vacationName
     Else
-        Debug.Print "Ferien NICHT gefunden", vacationName, vacationStart, vacationEnd
+        Debug.Print "Ferien NICHT gefunden oder ausserhalb Kalender:", vacationName, vacationStart, vacationEnd
     End If
 End Sub
 
