@@ -30,30 +30,25 @@ End Sub
 '@Description("Worksheet change event - auto-fills week when Monday value is entered")
 Private Sub Worksheet_Change(ByVal Target As Range)
     If Target.Cells.Count > 1 Then Exit Sub
+    If Target.value = vbNullString Then Exit Sub
 
-    '--- Auto-fill week when Monday (column E) value is entered
-    If Target.value <> vbNullString Then
-        Dim shouldFillWeek As Boolean
-        shouldFillWeek = (ActiveCell.Column = 5)
+    '--- Check if change is in column E (Monday)
+    Dim shouldFillWeek As Boolean
+    shouldFillWeek = (ActiveCell.Column = 5)
 
-        If shouldFillWeek Then
-            Application.EnableEvents = False
+    If Not shouldFillWeek Then Exit Sub
 
-            '--- Fill remaining weekdays (Tue-Fri) with Monday value
-            Dim dayCell As Range
-            For Each dayCell In Target.offset(0, 1).Resize(1, 4).Cells
-                If dayCell.value = vbNullString Then
-                    dayCell.value = Target.value
-                End If
-            Next dayCell
+    Application.EnableEvents = False
 
-            Application.EnableEvents = True
+    '--- Fill remaining weekdays (Tue-Fri) with Monday value
+    Dim dayCell As Range
+    For Each dayCell In Target.offset(0, 1).Resize(1, 4).Cells
+        If dayCell.value = vbNullString Then
+            dayCell.value = Target.value
         End If
-    End If
+    Next dayCell
 
-    '--- NEW (V2.8): Sync changes to Personalplaner overview (bidirectional linking)
-    '--- Transforms LongForm -> ShortForm (e.g., "Ferien" -> "F")
-    Call LinkingService.SyncCellToOverview(Me, Target)
+    Application.EnableEvents = True
 
     Me.Calculate
 End Sub

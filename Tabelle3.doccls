@@ -98,10 +98,6 @@ Private Sub Worksheet_Change(ByVal Target As Range)
         Call PromptAndApplyWeeklyRecurrence(Target)
     End If
 
-    '--- NEW (V2.8): Sync changes to corresponding KW sheet (if exists)
-    '--- Transforms ShortForm -> LongForm (e.g., "F" -> "Ferien")
-    Call LinkingService.SyncCellToWeeklySheet(Me, Target)
-
     Exit Sub
 
 ErrorHandler:
