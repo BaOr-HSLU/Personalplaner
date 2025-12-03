@@ -1,55 +1,34 @@
-﻿'@Folder "WOCHENPLANER"
+﻿'@Folder("Worksheets.WeeklyTemplate")
+'@ModuleDescription("Weekly planning template (KW) with ListBox filters")
 Option Explicit
 
-Public copying                         As Boolean
+Public copying As Boolean
 
+'@Description("ListBox Funktion change event - applies filter to table")
 Private Sub ListBoxFunktion_Change()
-    ApplyTableFilter Me, "ListBoxFunktion", "Funktion"
+    FilterService.ApplyTableFilter Me, "ListBoxFunktion", "Funktion"
 End Sub
 
+'@Description("ListBox Team change event - applies filter to table")
 Private Sub ListBoxTeam_Change()
-    ApplyTableFilter Me, "ListBoxTeam", "Team"
+    FilterService.ApplyTableFilter Me, "ListBoxTeam", "Team"
 End Sub
 
+'@Description("Worksheet activate event - initializes filters and forms")
 Private Sub Worksheet_Activate()
-    
-    InitListBox Me, "ListBoxFunktion", "Funktion"
-    InitListBox Me, "ListBoxTeam", "Team"
-    
-    UF_Filter.LoadData
-    UF_Projekte.LoadData
-    
+    '--- Initialize ListBox filters
+    WeeklySheetService.InitializeFilterListBox Me, "ListBoxFunktion", "Funktion"
+    WeeklySheetService.InitializeFilterListBox Me, "ListBoxTeam", "Team"
+
+    '--- Load project filter data
+    UF_Filter.LoadFilterData
+    UF_Projekte.LoadProjectData
+
     Me.Calculate
 End Sub
 
+'@Description("Worksheet change event - auto-fills week when Monday value is entered")
 Private Sub Worksheet_Change(ByVal Target As Range)
-<<<<<<< Updated upstream
-    
-    Application.EnableEvents = False
-    
-    Dim Wocheschreiben As Boolean
-    Dim cell As Range
-    
-    If Target.Cells.Count > 1 Then Exit Sub
-    If Target.Value = "" Then Exit Sub
-    
-    If ActiveCell.Column = 5 Then
-        Wocheschreiben = True
-    Else
-        Wocheschreiben = False
-    End If
-    
-    If Wocheschreiben Then
-        For Each cell In Target.offset(0, 1).Resize(1, 4).Cells
-            If cell.Value = "" Then
-                cell.Value = Target.Value
-            End If
-        Next cell
-    End If
-    
-    Application.EnableEvents = True
-    
-=======
     If Target.Cells.Count > 1 Then Exit Sub
 
     '--- Auto-fill week when Monday (column E) value is entered
@@ -72,10 +51,9 @@ Private Sub Worksheet_Change(ByVal Target As Range)
         End If
     End If
 
-    '--- NEW: Sync changes to Personalplaner overview (bidirectional linking)
+    '--- NEW (V2.8): Sync changes to Personalplaner overview (bidirectional linking)
     '--- Transforms LongForm -> ShortForm (e.g., "Ferien" -> "F")
     Call LinkingService.SyncCellToOverview(Me, Target)
 
->>>>>>> Stashed changes
     Me.Calculate
 End Sub
