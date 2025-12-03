@@ -122,7 +122,7 @@ PromptInputs:
     '--- Prompt for commission number
     Dim commissionInput As Variant
     commissionInput = Application.InputBox( _
-        "Kommissionsnummer fÃ¼r " & projectName, _
+        "Kommissionsnummer für " & projectName, _
         "Kommissionsnummer", _
         Type:=2)
 
@@ -137,7 +137,7 @@ PromptInputs:
     '--- Prompt for remarks
     Dim remarksInput As Variant
     remarksInput = Application.InputBox( _
-        "Bemerkung fÃ¼r " & projectName, _
+        "Bemerkung für " & projectName, _
         "Bemerkung", _
         Type:=2)
 

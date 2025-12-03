@@ -18,7 +18,7 @@ Public Sub CreateWeeklySheet(ByVal selectedCell As Range)
     On Error GoTo 0
 
     If calendarWeekNumber = 0 Then
-        MsgBox "Keine gültige Kalenderwoche ausgewählt!", vbExclamation
+        MsgBox "Keine g�ltige Kalenderwoche ausgewählt!", vbExclamation
         Exit Sub
     End If
 
@@ -121,9 +121,9 @@ Private Sub CopyEmployeeDataToWeeklySheet(ByVal weeklySheet As Worksheet, ByVal 
             '--- Copy employee data
             newRow.Range(1, 1).value = sourceRow.Range(1, 6).value 'Number
             newRow.Range(1, 2).value = sourceRow.Range(1, 7).value & vbNewLine & _
-                                       sourceRow.Range(1, 9).value & vbNewLine & _
+                                       Format(sourceRow.Range(1, 9).value, "000 000 00 00") & vbNewLine & _
                                        sourceRow.Range(1, 13).value 'Name, Phone, Email
-
+            
             DateHelpers.FormatFirstLineBold newRow.Range(1, 2)
 
             newRow.Range(1, 3).value = sourceRow.Range(1, 8).value 'Function

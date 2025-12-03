@@ -80,9 +80,9 @@ Public Function GetAllCodes() As Dictionary
     codes.Add "F", AbsenceCode.Create("F", "F", "Ferien", RGB(0, 176, 240))
     codes.Add "U", AbsenceCode.Create("U", "U", "Unfall", RGB(255, 192, 0))
     codes.Add "K", AbsenceCode.Create("K", "K", "Krank", RGB(255, 192, 0))
-    codes.Add "WK", AbsenceCode.Create("WK", "WK", "Milit√§r", RGB(0, 176, 80))
+    codes.Add "WK", AbsenceCode.Create("WK", "WK", "Milit‰r", RGB(0, 176, 80))
     codes.Add "S", AbsenceCode.Create("S", "S", "Schule", RGB(224, 237, 201))
-    codes.Add "√úK", AbsenceCode.Create("√úK", "√úK", "√úberbetr. Kurs", RGB(224, 237, 201))
+    codes.Add "‹K", AbsenceCode.Create("‹K", "‹K", "‹berbetr. Kurs", RGB(224, 237, 201))
     codes.Add "T", AbsenceCode.Create("T", "T", "Teilzeit", RGB(191, 191, 191))
 
     Set GetAllCodes = codes

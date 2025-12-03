@@ -424,7 +424,7 @@ Public Sub SendWeeklyReportReminder()
                     emailCount = emailCount + 1
                 Else
                     errorCount = errorCount + 1
-                    errorList = errorList & "- " & emp.DisplayName & ": Keine gültige E-Mail-Adresse" & vbNewLine
+                    errorList = errorList & "- " & emp.DisplayName & ": Keine g�ltige E-Mail-Adresse" & vbNewLine
                 End If
             End If
         End If
@@ -433,8 +433,8 @@ Public Sub SendWeeklyReportReminder()
     Next employeeKey
 
     If emailList = vbNullString Then
-        MsgBox "Keine gültigen E-Mail-Adressen gefunden." & vbNewLine & vbNewLine & _
-               "Bitte prüfen Sie, ob die E-Mail-Adressen in der 3. Zeile der Namenszellen stehen.", _
+        MsgBox "Keine g�ltigen E-Mail-Adressen gefunden." & vbNewLine & vbNewLine & _
+               "Bitte pr�fen Sie, ob die E-Mail-Adressen in der 3. Zeile der Namenszellen stehen.", _
                vbExclamation, "Keine Empfänger"
         GoTo CleanupAndExit
     End If
@@ -456,7 +456,7 @@ Public Sub SendWeeklyReportReminder()
 
     '--- FIX: Use HTMLBody with UTF-8 charset to properly display German umlauts
     '--- The original .body property doesn't properly encode UTF-8 characters
-    '--- causing umlauts (ä, ö, ü) to display as wrong characters
+    '--- causing umlauts (ä, ö, �) to display as wrong characters
     Dim emailBodyHTML As String
     emailBodyHTML = "<!DOCTYPE html>" & vbNewLine & _
                     "<html>" & vbNewLine & _
@@ -467,7 +467,7 @@ Public Sub SendWeeklyReportReminder()
                     "<p>Hallo zusammen,</p>" & vbNewLine & _
                     "<p>bitte gebt noch euren Wochenrapport ab.</p>" & vbNewLine & _
                     "<p>Vielen Dank!<br>" & vbNewLine & _
-                    "Mit freundlichen Grüssen</p>" & vbNewLine & _
+                    "Mit freundlichen Gr�ssen</p>" & vbNewLine & _
                     "</body>" & vbNewLine & _
                     "</html>"
 

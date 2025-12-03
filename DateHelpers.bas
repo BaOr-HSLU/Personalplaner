@@ -17,7 +17,7 @@ Public Function FindDateColumn( _
         Optional ByVal firstColumnToSearch As Long = 1, _
         Optional ByVal lastColumnToSearch As Long = 0) As Long
     '@Ignore EmptyStringLiteral
-    On Error GoTo CleanFail
+    'On Error GoTo CleanFail
 
     Dim headerRange As Range
     Dim matchResult As Variant
@@ -118,7 +118,7 @@ End Function
 '@Description("Formats multi-line cell - makes first line bold")
 '@Param targetRange The range to format
 Public Sub FormatFirstLineBold(ByVal targetRange As Range)
-    On Error GoTo ErrorHandler
+    'On Error GoTo ErrorHandler
 
     Dim previousScreenUpdating As Boolean
     Dim previousEnableEvents As Boolean

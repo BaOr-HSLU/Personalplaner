@@ -64,7 +64,7 @@ Public Sub RefreshRibbon()
     Exit Sub
 
 RestartRequired:
-    Application.StatusBar = "Bitte Excel neu starten für Ribbon-Änderungen"
+    Application.StatusBar = "Bitte Excel neu starten f�r Ribbon-Änderungen"
 End Sub
 
 '@Description("Callback: Controls visibility based on active sheet")
@@ -88,7 +88,7 @@ End Sub
 '@Description("Callback: Button click handler")
 'NOTE: CUSTOMUI XML CALLBACK: onAction="OnRibbonButtonClick"
 Public Sub OnRibbonButtonClick(ByVal control As IRibbonControl)
-    On Error GoTo ErrorHandler
+    'On Error GoTo ErrorHandler
 
     Select Case control.id
         '--- Navigation Buttons ---
@@ -167,7 +167,7 @@ Public Sub OnRibbonButtonClick(ByVal control As IRibbonControl)
     Exit Sub
 
 ErrorHandler:
-    MsgBox "Fehler beim Ausführen der Ribbon-Aktion:" & vbNewLine & vbNewLine & _
+    MsgBox "Fehler beim Ausf�hren der Ribbon-Aktion:" & vbNewLine & vbNewLine & _
            "Control: " & control.id & vbNewLine & _
            "Fehler: " & Err.Description, _
            vbCritical, "Ribbon-Fehler"
@@ -231,7 +231,7 @@ End Sub
 
 '@Description("Creates a new calendar in the main Personalplaner sheet")
 Private Sub CreateNewCalendar()
-    On Error GoTo ErrorHandler
+    'On Error GoTo ErrorHandler
 
     '--- Navigate to Personalplaner sheet
     Call NavigateToOverview

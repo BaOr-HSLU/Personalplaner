@@ -5,7 +5,7 @@ Option Explicit
 
 '@Description("Sends filtered weekly plan as PDF to all visible employees")
 Public Sub SendWeeklyPlanPDFToEmployees()
-    On Error GoTo ErrorHandler
+    'On Error GoTo ErrorHandler
 
     Dim activeWorksheet As Worksheet
     Set activeWorksheet = ActiveSheet
@@ -57,7 +57,7 @@ Public Sub SendWeeklyPlanPDFToEmployees()
     Next employeeKey
 
     If emailAddressList = vbNullString Then
-        MsgBox "Keine gültigen E-Mail-Adressen gefunden.", vbExclamation, "Keine Empfänger"
+        MsgBox "Keine g�ltigen E-Mail-Adressen gefunden.", vbExclamation, "Keine Empfänger"
         Exit Sub
     End If
 
@@ -81,7 +81,7 @@ Public Sub SendWeeklyPlanPDFToEmployees()
 
     '--- FIX: Use HTMLBody with UTF-8 charset to properly display German umlauts
     '--- The original .Body property doesn't properly encode UTF-8 characters
-    '--- causing umlauts (ä, ö, ü) to display as wrong characters
+    '--- causing umlauts (ä, ö, �) to display as wrong characters
     Dim emailBodyHTML As String
     emailBodyHTML = "<!DOCTYPE html>" & vbNewLine & _
                     "<html>" & vbNewLine & _
@@ -91,7 +91,7 @@ Public Sub SendWeeklyPlanPDFToEmployees()
                     "<body style=""font-family: Calibri, Arial, sans-serif; font-size: 11pt;"">" & vbNewLine & _
                     "<p>Hallo miteinander,</p>" & vbNewLine & _
                     "<p>anbei erhaltet ihr die Wochenliste von " & activeWorksheet.Name & ".</p>" & vbNewLine & _
-                    "<p>Mit freundlichen Grüssen</p>" & vbNewLine & _
+                    "<p>Mit freundlichen Gr�ssen</p>" & vbNewLine & _
                     "</body>" & vbNewLine & _
                     "</html>"
 

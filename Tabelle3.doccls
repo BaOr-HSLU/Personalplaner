@@ -148,3 +148,4 @@ Private Sub PromptAndApplyWeeklyRecurrence(ByVal startCell As Range)
     Application.EnableEvents = True
 End Sub
 
+
