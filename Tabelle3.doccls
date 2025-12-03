@@ -18,8 +18,46 @@ End Sub
 
 
 Private Sub Worksheet_Change(ByVal Target As Range)
+<<<<<<< Updated upstream
     Dim lo As ListObject
     Dim i As Long
+=======
+    On Error GoTo ErrorHandler
+
+    '--- Only process single-cell changes
+    If Target.Cells.Count > 1 Then Exit Sub
+
+    '--- Check if value is School or Part-time code
+    Dim cellValue As String
+    cellValue = CStr(Target.value)
+
+    If cellValue = "S" Or cellValue = "T" Then
+        Call PromptAndApplyWeeklyRecurrence(Target)
+    End If
+
+    '--- NEW: Sync changes to corresponding KW sheet (if exists)
+    '--- Transforms ShortForm -> LongForm (e.g., "F" -> "Ferien")
+    Call LinkingService.SyncCellToWeeklySheet(Me, Target)
+
+    Exit Sub
+
+ErrorHandler:
+    Application.EnableEvents = True
+    MsgBox "Fehler beim Eintragen der Serientermine: " & Err.Description, vbExclamation
+End Sub
+
+'@Description("Prompts user and applies weekly recurring entry (every 5 columns = 1 week)")
+'@Param("startCell - The cell where recurrence starts")
+Private Sub PromptAndApplyWeeklyRecurrence(ByVal startCell As Range)
+    Dim userResponse As VbMsgBoxResult
+    userResponse = MsgBox("Soll die Schule für jede Woche eingetragen werden?", _
+                          vbYesNo, _
+                          "Serientermin Eintragen")
+
+    If userResponse <> vbYes Then Exit Sub
+
+    '--- Disable events to prevent triggering Worksheet_Change recursively
+>>>>>>> Stashed changes
     Application.EnableEvents = False
     If Target.Cells.Count > 1 Then Exit Sub
     If Target.Value = "S" Or Target.Value = "T" Then

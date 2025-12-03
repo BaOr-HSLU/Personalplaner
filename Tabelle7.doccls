@@ -23,6 +23,7 @@ Private Sub Worksheet_Activate()
 End Sub
 
 Private Sub Worksheet_Change(ByVal Target As Range)
+<<<<<<< Updated upstream
     
     Application.EnableEvents = False
     
@@ -48,5 +49,33 @@ Private Sub Worksheet_Change(ByVal Target As Range)
     
     Application.EnableEvents = True
     
+=======
+    If Target.Cells.Count > 1 Then Exit Sub
+
+    '--- Auto-fill week when Monday (column E) value is entered
+    If Target.value <> vbNullString Then
+        Dim shouldFillWeek As Boolean
+        shouldFillWeek = (ActiveCell.Column = 5)
+
+        If shouldFillWeek Then
+            Application.EnableEvents = False
+
+            '--- Fill remaining weekdays (Tue-Fri) with Monday value
+            Dim dayCell As Range
+            For Each dayCell In Target.offset(0, 1).Resize(1, 4).Cells
+                If dayCell.value = vbNullString Then
+                    dayCell.value = Target.value
+                End If
+            Next dayCell
+
+            Application.EnableEvents = True
+        End If
+    End If
+
+    '--- NEW: Sync changes to Personalplaner overview (bidirectional linking)
+    '--- Transforms LongForm -> ShortForm (e.g., "Ferien" -> "F")
+    Call LinkingService.SyncCellToOverview(Me, Target)
+
+>>>>>>> Stashed changes
     Me.Calculate
 End Sub
