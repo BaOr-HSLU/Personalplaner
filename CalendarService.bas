@@ -551,39 +551,33 @@ Private Sub MarkVacationPeriod(ByVal targetSheet As Worksheet, _
 
     Application.StatusBar = "Ferien / " & vacationName & " von " & vacationStart & " bis " & vacationEnd
 
-    Dim firstColumn As Long
-    Dim lastColumn As Long
-    firstColumn = 0
-    lastColumn = 0
+    '--- Find start and end columns using .Find (MUCH faster than loop)
+    Dim startCell As Range
+    Dim endCell As Range
 
-    '--- Find columns for vacation period by checking actual dates
-    '--- Since we changed the display to weekday names, we need to match by actual dates
-    '--- We'll need to calculate which columns correspond to the vacation dates
-    Dim currentCol As Long
-    Dim checkDate As Date
+    '--- Find vacation start date
+    Set startCell = datesRange.Find(What:=CLng(vacationStart), _
+                                    LookIn:=xlValues, _
+                                    LookAt:=xlWhole, _
+                                    SearchOrder:=xlByColumns, _
+                                    SearchDirection:=xlNext, _
+                                    MatchCase:=False)
 
-    '--- Neue Variablen
-    Dim lastCol As Long
-    Dim datesArray As Variant
-    
-    '--- Optimierter Loop
-    lastCol = datesRange.Column + datesRange.Columns.Count - 1
-    
-    ' Werte einmalig in Array laden (massiver Performance-Gewinn!)
-    datesArray = Tabelle3.Range(Tabelle3.Cells(10, datesRange.Column), _
-                                Tabelle3.Cells(10, lastCol)).value
-    
-    For currentCol = datesRange.Column To lastCol
-        checkDate = datesArray(1, currentCol - datesRange.Column + 1)
-        
-        If checkDate >= vacationStart And checkDate <= vacationEnd Then
-            If firstColumn = 0 Then firstColumn = currentCol
-            lastColumn = currentCol
-        End If
-    Next currentCol
+    '--- Find vacation end date
+    Set endCell = datesRange.Find(What:=CLng(vacationEnd), _
+                                  LookIn:=xlValues, _
+                                  LookAt:=xlWhole, _
+                                  SearchOrder:=xlByColumns, _
+                                  SearchDirection:=xlNext, _
+                                  MatchCase:=False)
 
-    '--- Mark vacation period
-    If firstColumn > 0 And lastColumn >= firstColumn Then
+    '--- Mark vacation period if both dates found
+    If Not startCell Is Nothing And Not endCell Is Nothing Then
+        Dim firstColumn As Long
+        Dim lastColumn As Long
+        firstColumn = startCell.Column
+        lastColumn = endCell.Column
+
         '--- FIX: Unmerge existing cells first to avoid conflicts
         Dim vacationRange As Range
         Set vacationRange = targetSheet.Range(targetSheet.Cells(datesRowNumber - 4, firstColumn), _
@@ -613,6 +607,8 @@ Private Sub MarkVacationPeriod(ByVal targetSheet As Worksheet, _
                 .Borders.LineStyle = xlNone
             End If
         End With
+    Else
+        Debug.Print "Ferien NICHT gefunden", vacationName, vacationStart, vacationEnd
     End If
 End Sub
 
@@ -678,22 +674,19 @@ Private Sub MarkHoliday(ByVal targetSheet As Worksheet, _
 
     Application.StatusBar = "Feiertag / " & holidayName & " " & holidayDate
 
-    '--- Find date column by calculating actual dates
-    Dim currentCol As Long
-    Dim checkDate As Date
-    Dim foundColumn As Long
-    foundColumn = 0
+    '--- Find date using .Find (MUCH faster than loop)
+    Dim foundCell As Range
+    Set foundCell = datesRange.Find(What:=CLng(holidayDate), _
+                                    LookIn:=xlValues, _
+                                    LookAt:=xlWhole, _
+                                    SearchOrder:=xlByColumns, _
+                                    SearchDirection:=xlNext, _
+                                    MatchCase:=False)
 
-    For currentCol = datesRange.Column To datesRange.Column + datesRange.Columns.Count - 1
-        checkDate = GetDateForColumn(targetSheet, datesRowNumber, currentCol)
+    If Not foundCell Is Nothing Then
+        Dim foundColumn As Long
+        foundColumn = foundCell.Column
 
-        If CLng(checkDate) = CLng(holidayDate) Then
-            foundColumn = currentCol
-            Exit For
-        End If
-    Next currentCol
-
-    If foundColumn > 0 Then
         '--- Color entire column
         With targetSheet.Range(targetSheet.Cells(datesRowNumber, foundColumn), _
                                targetSheet.Cells(datesRowNumber + EMPLOYEE_ROWS_COUNT, foundColumn)).Interior
